@@ -16,8 +16,10 @@
 
 package com.github.camel.component.disruptor;
 
-import com.lmax.disruptor.EventHandler;
-import java.util.concurrent.ExecutorService;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.camel.Consumer;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -31,11 +33,10 @@ import org.apache.camel.util.ExchangeHelper;
  *
  * TODO: SuspendableService, ShutdownAware ?
  */
-public class DisruptorConsumer extends ServiceSupport implements Consumer, EventHandler<ExchangeEvent> {
+public class DisruptorConsumer extends ServiceSupport implements Consumer {
 
     private final DisruptorEndpoint endpoint;
     private final Processor processor;
-    private ExecutorService executor;
     private ExceptionHandler exceptionHandler;
 
     public DisruptorConsumer(DisruptorEndpoint endpoint, Processor processor) {
@@ -61,14 +62,22 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Event
 
     @Override
     protected void doStart() throws Exception {
-        executor = getEndpoint().getCamelContext().getExecutorServiceManager().newFixedThreadPool(this, getEndpoint().getEndpointUri(), getEndpoint().getConcurrentConsumers());
         getEndpoint().onStarted(this);
     }
 
     @Override
     protected void doStop() throws Exception {
         getEndpoint().onStopped(this);
-        executor.shutdown();
+    }
+
+    public Set<LifecycleAwareExchangeEventHandler> createEventHandlers(int concurrentConsumers) {
+        Set<LifecycleAwareExchangeEventHandler> eventHandlers = new HashSet<LifecycleAwareExchangeEventHandler>();
+
+        for (int i = 0; i < concurrentConsumers; ++i) {
+            eventHandlers.add(new ConsumerEventHandler(i, concurrentConsumers));
+        }
+
+        return eventHandlers;
     }
 
     /**
@@ -85,23 +94,65 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Event
         return newExchange;
     }
 
-    @Override
-    public void onEvent(final ExchangeEvent event, long sequence, boolean endOfBatch) throws Exception {
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
+    public class ConsumerEventHandler implements LifecycleAwareExchangeEventHandler {
+
+        private final int ordinal;
+        private final int concurrentConsumers;
+        private volatile CountDownLatch latch;
+
+        public ConsumerEventHandler(int ordinal, int concurrentConsumers) {
+
+            this.ordinal = ordinal;
+            this.concurrentConsumers = concurrentConsumers;
+        }
+
+        @Override
+        public void onEvent(final ExchangeEvent event, long sequence, boolean endOfBatch) throws Exception {
+            // Consumer threads are managed at the endpoint to achieve the optimal performance.
+            // However, both multiple consumers (pub-sub style multicasting) as well as 'worker-pool' consumers dividing
+            // exchanges amongst them are scheduled on their own threads and are provided with all exchanges.
+            // To prevent duplicate exchange processing by worker-pool event handlers, they are all given an ordinal,
+            // which can be used to determine whether he should process the exchange, or leave it for his brethren.
+            //see http://code.google.com/p/disruptor/wiki/FrequentlyAskedQuestions#How_do_you_arrange_a_Disruptor_with_multiple_consumers_so_that_e
+            if (sequence % concurrentConsumers == ordinal) {
                 Exchange exchange = prepareExchange(event.getExchange());
 
                 try {
                     processor.process(exchange);
                 } catch (Throwable e) {
-                if (exchange != null) {
-                    getExceptionHandler().handleException("Error processing exchange", exchange, e);
-                } else {
-                    getExceptionHandler().handleException(e);
+                    if (exchange != null) {
+                        getExceptionHandler().handleException("Error processing exchange", exchange, e);
+                    } else {
+                        getExceptionHandler().handleException(e);
+                    }
                 }
             }
+        }
+
+        @Override
+        public void await() throws InterruptedException {
+            if (latch != null) {
+                latch.await();
             }
-        });
+        }
+
+        @Override
+        public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+            if (latch != null) {
+                return latch.await(timeout, unit);
+            } else {
+                return true;
+            }
+        }
+
+        @Override
+        public void onStart() {
+            latch = new CountDownLatch(1);
+        }
+
+        @Override
+        public void onShutdown() {
+            latch.countDown();
+        }
     }
 }

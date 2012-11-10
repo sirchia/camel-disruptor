@@ -35,9 +35,7 @@ public class DisruptorProducer extends DefaultAsyncProducer {
     @Override
     public boolean process(Exchange exchange, AsyncCallback callback) {
         //TODO callback and WaitForTaskToComplete?
-        long sequence = endpoint.getRingBuffer().next();
-        endpoint.getRingBuffer().get(sequence).setExchange(exchange);
-        endpoint.getRingBuffer().publish(sequence);
+        endpoint.publish(exchange);
 
         callback.done(true);
         return true;

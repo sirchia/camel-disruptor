@@ -25,18 +25,33 @@ import org.apache.camel.impl.DefaultComponent;
  * Parameters:
  *  - bufferSize: size of the ringbuffer (will be rounded up to nearest power of 2), default 1024
  *  - concurrentConsumers: number of concurrent threads processing exchanges, default 1
+ *  - multipleConsumers: whether multiple consumers or Publish-Subscribe style multicast is supported, default false
  */
 public class DisruptorComponent extends DefaultComponent {
     private int defaultBufferSize = 1024;
 
     private int defaultConcurrentConsumers = 1;
 
+    private boolean defaultMultipleConsumers = false;
+
     @Override
     protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
         int bufferSize = getAndRemoveParameter(parameters, "bufferSize", int.class, defaultBufferSize);
-        int concurrentConsumers = getAndRemoveParameter(parameters, "concurrentConsumers", int.class, defaultConcurrentConsumers);
+        if (bufferSize <= 0) {
+            throw new IllegalArgumentException("bufferSize found to be " + bufferSize + ", must be greater than 1");
+        }
 
-        return new DisruptorEndpoint(uri, this, bufferSize, concurrentConsumers);
+        int concurrentConsumers = getAndRemoveParameter(parameters, "concurrentConsumers", int.class,
+                defaultConcurrentConsumers);
+        if (concurrentConsumers < 0) {
+            throw new IllegalArgumentException("concurrentConsumers found to be " + concurrentConsumers +
+                    ", must be greater than 0");
+        }
+
+        boolean multipleConsumers = getAndRemoveParameter(parameters, "multipleConsumers", boolean.class,
+                defaultMultipleConsumers);
+
+        return new DisruptorEndpoint(uri, this, bufferSize, concurrentConsumers, multipleConsumers);
     }
 
     public int getDefaultBufferSize() {
@@ -53,5 +68,13 @@ public class DisruptorComponent extends DefaultComponent {
 
     public void setDefaultConcurrentConsumers(int defaultConcurrentConsumers) {
         this.defaultConcurrentConsumers = defaultConcurrentConsumers;
+    }
+
+    public boolean isDefaultMultipleConsumers() {
+        return defaultMultipleConsumers;
+    }
+
+    public void setDefaultMultipleConsumers(boolean defaultMultipleConsumers) {
+        this.defaultMultipleConsumers = defaultMultipleConsumers;
     }
 }
