@@ -40,6 +40,8 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     private final int bufferSize;
     private final int concurrentConsumers;
     private final boolean multipleConsumers;
+    private final DisruptorWaitStrategy waitStrategy;
+    private final DisruptorClaimStrategy claimStrategy;
 
     //access to the following fields are all guarded by 'this'
     private ExecutorService executor;
@@ -49,12 +51,15 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
             new HashMap<DisruptorConsumer, List<BatchEventProcessor<ExchangeEvent>>>();
     private final Set<DisruptorConsumer> startedConsumers = new HashSet<DisruptorConsumer>();
 
-    public DisruptorEndpoint(String endpointUri, DisruptorComponent component, int bufferSize, int concurrentConsumers, boolean multipleConsumers) {
+    public DisruptorEndpoint(String endpointUri, DisruptorComponent component, int bufferSize, int concurrentConsumers,
+                             boolean multipleConsumers, DisruptorWaitStrategy waitStrategy, DisruptorClaimStrategy claimStrategy) {
         super(endpointUri, component);
         this.endpointUri = endpointUri;
         this.bufferSize = bufferSize;
         this.concurrentConsumers = concurrentConsumers;
         this.multipleConsumers = multipleConsumers;
+        this.waitStrategy = waitStrategy;
+        this.claimStrategy = claimStrategy;
     }
 
     @Override
@@ -118,9 +123,9 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
      * This method awaits completion of previously active consumers, and reconfigures and starts a new disruptor with
      * the currently active consumers.
      *
-     * @throws InterruptedException
+     * @throws Exception
      */
-    private void reconfigureDisruptor() throws InterruptedException {
+    private void reconfigureDisruptor() throws Exception {
         Set<LifecycleAwareExchangeEventHandler> newEventHandlers = new HashSet<LifecycleAwareExchangeEventHandler>();
         Disruptor<ExchangeEvent> newDisruptor = newInitializedDisruptor(newEventHandlers);
 
@@ -128,7 +133,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
         //everything is now done and we are ready to start our new eventhandlers
         //start by resizing our executor to match the new state
-        resizeThreadPoolExecutor(startedConsumers.size()*concurrentConsumers);
+        resizeThreadPoolExecutor(startedConsumers.size() * concurrentConsumers);
 
         //and use our delayed executor to really really execute the event handlers now
         delayedExecutor.executeDelayedCommands(executor);
@@ -141,10 +146,11 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     }
 
     private Disruptor<ExchangeEvent> newInitializedDisruptor(
-            Set<LifecycleAwareExchangeEventHandler> registeredEventHandlers) {
+            Set<LifecycleAwareExchangeEventHandler> registeredEventHandlers) throws Exception {
         //TODO ClaimStrategy, WaitStrategy
-        Disruptor<ExchangeEvent> newDisruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE, bufferSize,
-                delayedExecutor);
+        Disruptor<ExchangeEvent> newDisruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE,
+                delayedExecutor, claimStrategy.createClaimStrategyInstance(bufferSize),
+                waitStrategy.createWaitStrategyInstance());
 
         //create eventhandlers for each consumer and add them to the new set of registeredEventHandlers
         for (DisruptorConsumer consumer : startedConsumers) {

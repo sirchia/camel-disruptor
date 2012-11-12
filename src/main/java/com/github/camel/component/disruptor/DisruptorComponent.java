@@ -34,6 +34,10 @@ public class DisruptorComponent extends DefaultComponent {
 
     private boolean defaultMultipleConsumers = false;
 
+    private DisruptorClaimStrategy defaultClaimStrategy = DisruptorClaimStrategy.MultiThreaded;
+
+    private DisruptorWaitStrategy defaultWaitStrategy = DisruptorWaitStrategy.Blocking;
+
     @Override
     protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
         int bufferSize = getAndRemoveParameter(parameters, "bufferSize", int.class, defaultBufferSize);
@@ -48,10 +52,17 @@ public class DisruptorComponent extends DefaultComponent {
                     ", must be greater than 0");
         }
 
+        DisruptorWaitStrategy waitStrategy = getAndRemoveParameter(parameters, "waitStrategy",
+                DisruptorWaitStrategy.class, defaultWaitStrategy);
+
+        DisruptorClaimStrategy claimStrategy = getAndRemoveParameter(parameters, "claimStrategy",
+                DisruptorClaimStrategy.class, defaultClaimStrategy);
+
         boolean multipleConsumers = getAndRemoveParameter(parameters, "multipleConsumers", boolean.class,
                 defaultMultipleConsumers);
 
-        return new DisruptorEndpoint(uri, this, bufferSize, concurrentConsumers, multipleConsumers);
+        return new DisruptorEndpoint(uri, this, bufferSize, concurrentConsumers, multipleConsumers, waitStrategy,
+                claimStrategy);
     }
 
     public int getDefaultBufferSize() {
@@ -76,5 +87,21 @@ public class DisruptorComponent extends DefaultComponent {
 
     public void setDefaultMultipleConsumers(boolean defaultMultipleConsumers) {
         this.defaultMultipleConsumers = defaultMultipleConsumers;
+    }
+
+    public DisruptorClaimStrategy getDefaultClaimStrategy() {
+        return defaultClaimStrategy;
+    }
+
+    public void setDefaultClaimStrategy(DisruptorClaimStrategy defaultClaimStrategy) {
+        this.defaultClaimStrategy = defaultClaimStrategy;
+    }
+
+    public DisruptorWaitStrategy getDefaultWaitStrategy() {
+        return defaultWaitStrategy;
+    }
+
+    public void setDefaultWaitStrategy(DisruptorWaitStrategy defaultWaitStrategy) {
+        this.defaultWaitStrategy = defaultWaitStrategy;
     }
 }
