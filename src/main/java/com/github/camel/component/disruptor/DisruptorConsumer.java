@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.camel.Consumer;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.apache.camel.SuspendableService;
 import org.apache.camel.impl.LoggingExceptionHandler;
 import org.apache.camel.spi.ExceptionHandler;
 import org.apache.camel.support.ServiceSupport;
@@ -33,7 +34,7 @@ import org.apache.camel.util.ExchangeHelper;
  *
  * TODO: SuspendableService, ShutdownAware ?
  */
-public class DisruptorConsumer extends ServiceSupport implements Consumer {
+public class DisruptorConsumer extends ServiceSupport implements Consumer, SuspendableService {
 
     private final DisruptorEndpoint endpoint;
     private final Processor processor;
@@ -68,6 +69,16 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer {
     @Override
     protected void doStop() throws Exception {
         getEndpoint().onStopped(this);
+    }
+
+    @Override
+    protected void doSuspend() throws Exception {
+        getEndpoint().onStopped(this);
+    }
+
+    @Override
+    protected void doResume() throws Exception {
+        getEndpoint().onStarted(this);
     }
 
     public Set<LifecycleAwareExchangeEventHandler> createEventHandlers(int concurrentConsumers) {

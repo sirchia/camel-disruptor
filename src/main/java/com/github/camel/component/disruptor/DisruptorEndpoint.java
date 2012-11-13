@@ -26,11 +26,15 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.camel.*;
 import org.apache.camel.impl.DefaultEndpoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * TODO: documentation
  */
 public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsumersSupport {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DisruptorEndpoint.class);
 
     private final AtomicReference<RingBuffer<ExchangeEvent>> activeRingBuffer = new AtomicReference<RingBuffer<ExchangeEvent>>();
 
@@ -98,11 +102,14 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     void onStarted(DisruptorConsumer consumer) throws Exception {
         synchronized (this) {
-            if (!startedConsumers.add(consumer)) {
-                throw new IllegalStateException("Tried to restart a consumer that was already started");
-            }
+            if (startedConsumers.add(consumer)) {
+                LOGGER.debug("Starting consumer {} on endpoint {}", consumer, endpointUri);
 
-            reconfigureDisruptor();
+                reconfigureDisruptor();
+            } else {
+                LOGGER.debug("Tried to start Consumer {} on endpoint {} but it was already started", consumer,
+                        endpointUri);
+            }
         }
 
     }
@@ -111,11 +118,16 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     void onStopped(DisruptorConsumer consumer) throws Exception {
         synchronized (this) {
 
-            if (!startedConsumers.remove(consumer)) {
-                throw new IllegalStateException("Tried to stop a consumer that was not started at this endpoint");
+            if (startedConsumers.remove(consumer)) {
+                LOGGER.debug("Stopping consumer {} on endpoint {}", consumer, endpointUri);
+
+                reconfigureDisruptor();
+            } else {
+                LOGGER.debug("Tried to stop Consumer {} on endpoint {} but it was already stopped", consumer,
+                        endpointUri);
             }
 
-            reconfigureDisruptor();
+
         }
     }
 

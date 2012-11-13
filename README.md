@@ -11,7 +11,6 @@ TODO
 ====
 - Documentation
 - Extensive Unit testing
-- Make consumers suspendable?
 - Check correct management of resources (e.g. thread-pools, disruptor, ringbuffer) in several startup/shutdown scenarios
 - Check correct behaviour for producer regarding wait-for and aynchronous callback of produce method
 - Compare performance for several use-cases with SEDA component
