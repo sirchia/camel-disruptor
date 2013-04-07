@@ -34,8 +34,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * TODO: documentation
- *
- * TODO: ShutdownAware ?
  */
 public class DisruptorConsumer extends ServiceSupport implements Consumer, SuspendableService {
 
@@ -135,7 +133,9 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
 
         private final int ordinal;
         private final int concurrentConsumers;
-        private volatile CountDownLatch latch;
+        private volatile boolean started = false;
+        private volatile CountDownLatch startedLatch = new CountDownLatch(1);
+        private volatile CountDownLatch stoppedLatch = new CountDownLatch(1);
 
         public ConsumerEventHandler(int ordinal, int concurrentConsumers) {
 
@@ -167,29 +167,41 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
         }
 
         @Override
-        public void await() throws InterruptedException {
-            if (latch != null) {
-                latch.await();
+        public void awaitStarted() throws InterruptedException {
+            if (!started) {
+                startedLatch.await();
             }
         }
 
         @Override
-        public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
-            if (latch != null) {
-                return latch.await(timeout, unit);
-            } else {
-                return true;
+        public boolean awaitStarted(long timeout, TimeUnit unit) throws InterruptedException {
+            return started || startedLatch.await(timeout, unit);
+        }
+
+        @Override
+        public void awaitStopped() throws InterruptedException {
+            if (started) {
+                stoppedLatch.await();
             }
+        }
+
+        @Override
+        public boolean awaitStopped(long timeout, TimeUnit unit) throws InterruptedException {
+            return !started || stoppedLatch.await(timeout, unit);
         }
 
         @Override
         public void onStart() {
-            latch = new CountDownLatch(1);
+            stoppedLatch = new CountDownLatch(1);
+            startedLatch.countDown();
+            started = true;
         }
 
         @Override
         public void onShutdown() {
-            latch.countDown();
+            startedLatch = new CountDownLatch(1);
+            stoppedLatch.countDown();
+            started = false;
         }
     }
 }

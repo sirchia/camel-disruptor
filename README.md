@@ -16,3 +16,7 @@ TODO
 - Compare performance for several use-cases with SEDA component
 
 
+Important characteristics
+=========================
+- Reconfiguring the usage of a Disruptor endpoint at runtime (e.g. adding/removing producers or consumers) is not very  efficient
+- Data sent over a Disruptor is directly processed and 'gone' if there is at least one consumer, late joiners only get new exchanges published after they've joined.

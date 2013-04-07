@@ -28,7 +28,6 @@ import org.apache.camel.util.ExchangeHelper;
 
 /**
  * TODO: documentation
- * TODO extend DefaultAsyncProcessor instead?
  */
 public class DisruptorProducer extends DefaultAsyncProducer {
 

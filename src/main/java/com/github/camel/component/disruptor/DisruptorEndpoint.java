@@ -231,6 +231,27 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
             delayedExecutor.executeDelayedCommands(executor);
         }
 
+        //make sure all event handlers are correctly started before we continue
+        for (LifecycleAwareExchangeEventHandler eventHandler : activeEventHandlers) {
+            boolean eventHandlerStarted = false;
+            while (!eventHandlerStarted) {
+                try {
+                    //The disruptor start command executed above should have triggered a start signal to all
+                    //event processors which, in their death, should notify our event handlers. They respond by
+                    //switching a latch and we want to await that latch here to make sure they are started.
+                    if (!eventHandler.awaitStarted(10, TimeUnit.SECONDS)) {
+                        //we wait for a relatively long, but limited amount of time to prevent an application using
+                        //this component from hanging indefinitely
+                        //Please report a bug if you can repruduce this
+                        LOGGER.error("Disruptor/event handler failed to start properly, PLEASE REPORT");
+                    }
+                    eventHandlerStarted = true;
+                } catch (InterruptedException e) {
+                    //just retry
+                }
+            }
+        }
+
         //Done! let her rip!
     }
 
@@ -269,12 +290,14 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
                 //the disruptor is now empty and all consumers are either done or busy processing their last exchange
                 while (!eventHandlerFinished) {
                     try {
-                        //TODO: Solve multi-threading issue, sometimes we hang here
                         //The disruptor shutdown command executed above should have triggered a halt signal to all
                         //event processors which, in their death, should notify our event handlers. They respond by
                         //switching a latch and we want to await that latch here to make sure they are done.
-                        if (!eventHandler.await(5, TimeUnit.SECONDS)) {
-                            LOGGER.error("FIXME: Disruptor/event handler failed to shut down properly");
+                        if (!eventHandler.awaitStopped(105, TimeUnit.SECONDS)) {
+                            //we wait for a relatively long, but limited amount of time to prevent an application using
+                            //this component from hanging indefinitely
+                            //Please report a bug if you can repruduce this
+                            LOGGER.error("Disruptor/event handler failed to shut down properly, PLEASE REPORT");
                         }
                         eventHandlerFinished = true;
                     } catch (InterruptedException e) {
