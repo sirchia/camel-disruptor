@@ -28,49 +28,29 @@ import org.apache.camel.impl.DefaultComponent;
  *  - multipleConsumers: whether multiple consumers or Publish-Subscribe style multicast is supported, default false
  */
 public class DisruptorComponent extends DefaultComponent {
-    private int defaultBufferSize = 1024;
 
-    private int defaultConcurrentConsumers = 1;
+    protected final int maxConcurrentConsumers = 500;
+    protected int defaultConcurrentConsumers = 1;
 
     private boolean defaultMultipleConsumers = false;
 
-    private DisruptorClaimStrategy defaultClaimStrategy = DisruptorClaimStrategy.MultiThreaded;
-
-    private DisruptorWaitStrategy defaultWaitStrategy = DisruptorWaitStrategy.Blocking;
-
     @Override
     protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
-        int bufferSize = getAndRemoveParameter(parameters, "bufferSize", int.class, defaultBufferSize);
-        if (bufferSize <= 0) {
-            throw new IllegalArgumentException("bufferSize found to be " + bufferSize + ", must be greater than 1");
+        int consumers = getAndRemoveParameter(parameters, "concurrentConsumers", Integer.class, defaultConcurrentConsumers);
+        boolean limitConcurrentConsumers = getAndRemoveParameter(parameters, "limitConcurrentConsumers", Boolean.class, true);
+        if (limitConcurrentConsumers && consumers >  maxConcurrentConsumers) {
+            throw new IllegalArgumentException("The limitConcurrentConsumers flag in set to true. ConcurrentConsumers cannot be set at a value greater than "
+                    + maxConcurrentConsumers + " was " + consumers);
         }
 
-        int concurrentConsumers = getAndRemoveParameter(parameters, "concurrentConsumers", int.class,
-                defaultConcurrentConsumers);
-        if (concurrentConsumers < 0) {
-            throw new IllegalArgumentException("concurrentConsumers found to be " + concurrentConsumers +
+        if (consumers < 0) {
+            throw new IllegalArgumentException("concurrentConsumers found to be " + consumers +
                     ", must be greater than 0");
         }
 
-        DisruptorWaitStrategy waitStrategy = getAndRemoveParameter(parameters, "waitStrategy",
-                DisruptorWaitStrategy.class, defaultWaitStrategy);
-
-        DisruptorClaimStrategy claimStrategy = getAndRemoveParameter(parameters, "claimStrategy",
-                DisruptorClaimStrategy.class, defaultClaimStrategy);
-
-        boolean multipleConsumers = getAndRemoveParameter(parameters, "multipleConsumers", boolean.class,
-                defaultMultipleConsumers);
-
-        return new DisruptorEndpoint(uri, this, bufferSize, concurrentConsumers, multipleConsumers, waitStrategy,
-                claimStrategy);
-    }
-
-    public int getDefaultBufferSize() {
-        return defaultBufferSize;
-    }
-
-    public void setDefaultBufferSize(int defaultBufferSize) {
-        this.defaultBufferSize = defaultBufferSize;
+        DisruptorEndpoint disruptorEndpoint = new DisruptorEndpoint(uri, this, consumers);
+        disruptorEndpoint.configureProperties(parameters);
+        return disruptorEndpoint;
     }
 
     public int getDefaultConcurrentConsumers() {
@@ -87,21 +67,5 @@ public class DisruptorComponent extends DefaultComponent {
 
     public void setDefaultMultipleConsumers(boolean defaultMultipleConsumers) {
         this.defaultMultipleConsumers = defaultMultipleConsumers;
-    }
-
-    public DisruptorClaimStrategy getDefaultClaimStrategy() {
-        return defaultClaimStrategy;
-    }
-
-    public void setDefaultClaimStrategy(DisruptorClaimStrategy defaultClaimStrategy) {
-        this.defaultClaimStrategy = defaultClaimStrategy;
-    }
-
-    public DisruptorWaitStrategy getDefaultWaitStrategy() {
-        return defaultWaitStrategy;
-    }
-
-    public void setDefaultWaitStrategy(DisruptorWaitStrategy defaultWaitStrategy) {
-        this.defaultWaitStrategy = defaultWaitStrategy;
     }
 }

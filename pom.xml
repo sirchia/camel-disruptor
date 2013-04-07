@@ -27,12 +27,12 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.compiler.version>1.6</java.compiler.version>
-        <mavencompilerplugin.version>2.5.1</mavencompilerplugin.version>
+        <mavencompilerplugin.version>3.0</mavencompilerplugin.version>
 
-        <disruptor.version>2.10.3</disruptor.version>
-        <camel.version>2.10.2</camel.version>
-        <junit.version>4.10</junit.version>
-        <slf4j.version>1.6.6</slf4j.version>
+        <disruptor.version>2.10.4</disruptor.version>
+        <camel.version>2.10.4</camel.version>
+        <junit.version>4.11</junit.version>
+        <slf4j.version>1.7.5</slf4j.version>
     </properties>
 
     <dependencies>

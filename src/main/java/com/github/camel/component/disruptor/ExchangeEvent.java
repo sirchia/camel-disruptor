@@ -23,7 +23,7 @@ import org.apache.camel.Exchange;
  */
 public class ExchangeEvent {
 
-    private Exchange exchange;
+    private volatile Exchange exchange;
 
     public Exchange getExchange() {
         return exchange;

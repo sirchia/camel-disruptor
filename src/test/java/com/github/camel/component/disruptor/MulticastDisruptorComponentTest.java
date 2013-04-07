@@ -56,9 +56,9 @@ public class MulticastDisruptorComponentTest extends CamelTestSupport {
         template.asyncSendBody(MULTIPLE_CONSUMERS_ENDPOINT_URI, VALUE);
 
         resultEndpoint1.await(5, TimeUnit.SECONDS);
-        resultEndpoint1.assertIsSatisfied();
+        resultEndpoint1.assertIsSatisfied(1);
         resultEndpoint2.await(5, TimeUnit.SECONDS);
-        resultEndpoint2.assertIsSatisfied();
+        resultEndpoint2.assertIsSatisfied(1);
     }
 
 //

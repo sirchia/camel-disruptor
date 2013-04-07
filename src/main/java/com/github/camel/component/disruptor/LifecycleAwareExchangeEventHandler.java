@@ -56,7 +56,7 @@ public interface LifecycleAwareExchangeEventHandler extends EventHandler<Exchang
      *
      * <p>If the current thread:
      * <ul>
-     * <li>has its interrupted status set on entry to this method; or
+     * <li>has its interrupted status set on entry to this method; “or
      * <li>is {@linkplain Thread#interrupt interrupted} while waiting,
      * </ul>
      * then {@link InterruptedException} is thrown and the current thread's

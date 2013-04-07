@@ -17,32 +17,37 @@
 package com.github.camel.component.disruptor;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import org.apache.camel.Consumer;
-import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
-import org.apache.camel.SuspendableService;
+import org.apache.camel.*;
 import org.apache.camel.impl.LoggingExceptionHandler;
 import org.apache.camel.spi.ExceptionHandler;
+import org.apache.camel.spi.Synchronization;
 import org.apache.camel.support.ServiceSupport;
+import org.apache.camel.util.AsyncProcessorConverterHelper;
+import org.apache.camel.util.AsyncProcessorHelper;
 import org.apache.camel.util.ExchangeHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * TODO: documentation
  *
- * TODO: SuspendableService, ShutdownAware ?
+ * TODO: ShutdownAware ?
  */
 public class DisruptorConsumer extends ServiceSupport implements Consumer, SuspendableService {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DisruptorConsumer.class);
+
     private final DisruptorEndpoint endpoint;
-    private final Processor processor;
+    private final AsyncProcessor processor;
     private ExceptionHandler exceptionHandler;
 
     public DisruptorConsumer(DisruptorEndpoint endpoint, Processor processor) {
         this.endpoint = endpoint;
-        this.processor = processor;
+        this.processor = AsyncProcessorConverterHelper.convert(processor);
     }
 
     public ExceptionHandler getExceptionHandler() {
@@ -91,21 +96,42 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
         return eventHandlers;
     }
 
-    /**
-     * Strategy to prepare exchange for being processed by this consumer
-     *
-     * @param exchange the exchange
-     * @return the exchange to process by this consumer.
-     */
-    protected Exchange prepareExchange(Exchange exchange) {
+    private Exchange prepareExchange(Exchange exchange) {
         // send a new copied exchange with new camel context
-        Exchange newExchange = ExchangeHelper.copyExchangeAndSetCamelContext(exchange, getEndpoint().getCamelContext());
+        Exchange newExchange = ExchangeHelper.copyExchangeAndSetCamelContext(exchange, endpoint.getCamelContext());
         // set the from endpoint
-        newExchange.setFromEndpoint(getEndpoint());
+        newExchange.setFromEndpoint(endpoint);
         return newExchange;
     }
 
-    public class ConsumerEventHandler implements LifecycleAwareExchangeEventHandler {
+    private void process(Exchange exchange) {
+        int size = endpoint.getConsumers().size();
+
+        // if there are multiple consumers then we should make a copy of the exchange
+        if (size > 1) {
+
+            // validate multiple consumers has been enabled
+            if (!endpoint.isMultipleConsumersSupported()) {
+                throw new IllegalStateException("Multiple consumers for the same endpoint is not allowed: " + endpoint);
+            }
+
+            // handover completions, as we need to done this when the multicast is done
+            final List<Synchronization> completions = exchange.handoverCompletions();
+
+
+            // send a new copied exchange with new camel context
+            exchange = prepareExchange(exchange);
+        }
+
+        // use the regular processor and use the asynchronous routing engine to support it
+        AsyncProcessorHelper.process(processor, exchange, new AsyncCallback() {
+            public void done(boolean doneSync) {
+                // noop
+            }
+        });
+    }
+
+    private class ConsumerEventHandler implements LifecycleAwareExchangeEventHandler {
 
         private final int ordinal;
         private final int concurrentConsumers;
@@ -126,11 +152,11 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
             // which can be used to determine whether he should process the exchange, or leave it for his brethren.
             //see http://code.google.com/p/disruptor/wiki/FrequentlyAskedQuestions#How_do_you_arrange_a_Disruptor_with_multiple_consumers_so_that_e
             if (sequence % concurrentConsumers == ordinal) {
-                Exchange exchange = prepareExchange(event.getExchange());
+                Exchange exchange = event.getExchange();
 
                 try {
-                    processor.process(exchange);
-                } catch (Throwable e) {
+                    process(exchange);
+                } catch (Exception e) {
                     if (exchange != null) {
                         getExceptionHandler().handleException("Error processing exchange", exchange, e);
                     } else {
