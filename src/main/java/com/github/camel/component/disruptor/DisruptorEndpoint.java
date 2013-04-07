@@ -18,6 +18,7 @@ package com.github.camel.component.disruptor;
 
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
+import com.lmax.disruptor.dsl.ProducerType;
 import java.util.*;
 import java.util.concurrent.*;
 import org.apache.camel.*;
@@ -41,7 +42,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     private int bufferSize = 1024;
     private int concurrentConsumers;
     private boolean multipleConsumers;
-    private DisruptorClaimStrategy claimStrategy = DisruptorClaimStrategy.MultiThreaded;
+    private ProducerType producerType = ProducerType.MULTI;
     private DisruptorWaitStrategy waitStrategy = DisruptorWaitStrategy.Blocking;
     private long timeout = 30000;
     private WaitForTaskToComplete waitForTaskToComplete = WaitForTaskToComplete.IfReplyExpected;
@@ -87,13 +88,13 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         this.waitForTaskToComplete = waitForTaskToComplete;
     }
 
-    @ManagedAttribute(description = "Disruptor claim strategy used by producers")
-    public DisruptorClaimStrategy getClaimStrategy() {
-        return claimStrategy;
+    @ManagedAttribute()
+    public ProducerType getProducerType() {
+        return producerType;
     }
 
-    public void setClaimStrategy(DisruptorClaimStrategy claimStrategy) {
-        this.claimStrategy = claimStrategy;
+    public void setProducerType(ProducerType producerType) {
+        this.producerType = producerType;
     }
 
     @ManagedAttribute(description = "Disruptor wait strategy used by consumers")
@@ -258,7 +259,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     private Disruptor<ExchangeEvent> newInitializedDisruptor() throws Exception {
 
         Disruptor<ExchangeEvent> newDisruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE,
-                delayedExecutor, claimStrategy.createClaimStrategyInstance(bufferSize),
+                bufferSize, delayedExecutor, producerType,
                 waitStrategy.createWaitStrategyInstance());
 
         activeEventHandlers = new HashSet<LifecycleAwareExchangeEventHandler>();
@@ -319,7 +320,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         RingBuffer<ExchangeEvent> ringBuffer = activeRingBuffer;
 
         long sequence = ringBuffer.next();
-        ringBuffer.get(sequence).setExchange(exchange);
+        ringBuffer.getPreallocated(sequence).setExchange(exchange);
         ringBuffer.publish(sequence);
     }
 
