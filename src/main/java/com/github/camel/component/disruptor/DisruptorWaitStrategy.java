@@ -27,7 +27,7 @@ public enum DisruptorWaitStrategy {
      *
      * This strategy can be used when throughput and low-latency are not as important as CPU resource.
      */
-    Blocking(BlockingWaitStrategy.class),
+    BLOCKING(BlockingWaitStrategy.class),
 
     /**
      * Sleeping strategy that initially spins, then uses a Thread.yield(), and eventually for the minimum number of nanos
@@ -35,7 +35,7 @@ public enum DisruptorWaitStrategy {
      *
      * This strategy is a good compromise between performance and CPU resource. Latency spikes can occur after quiet periods.
      */
-    Sleeping(SleepingWaitStrategy.class),
+    SLEEPING(SleepingWaitStrategy.class),
 
     /**
      * Busy Spin strategy that uses a busy spin loop for {@link com.lmax.disruptor.EventProcessor}s waiting on a barrier.
@@ -43,7 +43,7 @@ public enum DisruptorWaitStrategy {
      * This strategy will use CPU resource to avoid syscalls which can introduce latency jitter.  It is best
      * used when threads can be bound to specific CPU cores.
      */
-    BusySpin(BusySpinWaitStrategy.class),
+    BUSY_SPIN(BusySpinWaitStrategy.class),
 
     /**
      * Yielding strategy that uses a Thread.yield() for {@link com.lmax.disruptor.EventProcessor}s waiting on a barrier
@@ -51,7 +51,7 @@ public enum DisruptorWaitStrategy {
      *
      * This strategy is a good compromise between performance and CPU resource without incurring significant latency spikes.
      */
-    Yielding(YieldingWaitStrategy.class);
+    YIELDING(YieldingWaitStrategy.class);
 
     private final Class<? extends WaitStrategy> waitStrategyClass;
 

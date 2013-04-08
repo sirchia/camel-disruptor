@@ -41,8 +41,8 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     private int bufferSize = 1024;
     private int concurrentConsumers;
     private boolean multipleConsumers;
-    private DisruptorClaimStrategy claimStrategy = DisruptorClaimStrategy.MultiThreaded;
-    private DisruptorWaitStrategy waitStrategy = DisruptorWaitStrategy.Blocking;
+    private DisruptorClaimStrategy claimStrategy = DisruptorClaimStrategy.MULTI_THREADED;
+    private DisruptorWaitStrategy waitStrategy = DisruptorWaitStrategy.BLOCKING;
     private long timeout = 30000;
     private WaitForTaskToComplete waitForTaskToComplete = WaitForTaskToComplete.IfReplyExpected;
 

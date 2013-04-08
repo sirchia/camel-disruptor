@@ -33,7 +33,7 @@ public enum DisruptorClaimStrategy {
      * for a single publisher, compared to the {@link com.lmax.disruptor.MultiThreadedLowContentionClaimStrategy} strategy which needs only a single
      * CAS and a lazySet per publication.
      */
-    MultiThreaded(MultiThreadedClaimStrategy.class),
+    MULTI_THREADED(MultiThreadedClaimStrategy.class),
 
     /**
      * Strategy to be used when there are multiple publisher threads claiming sequences.
@@ -41,7 +41,7 @@ public enum DisruptorClaimStrategy {
      * This strategy requires sufficient cores to allow multiple publishers to be concurrently claiming sequences and those
      * thread a contented relatively infrequently.
      */
-    MultiThreadedLowContention(MultiThreadedLowContentionClaimStrategy.class),
+    MULTI_THREADED_LOW_CONTENTION(MultiThreadedLowContentionClaimStrategy.class),
 
     /**
      * Optimised strategy can be used when there is a single publisher thread claiming sequences.
@@ -49,7 +49,7 @@ public enum DisruptorClaimStrategy {
      * This strategy must <b>not</b> be used when multiple threads are used for publishing concurrently on the same
      * endpoint.
      */
-    SingleThreaded(SingleThreadedClaimStrategy.class);
+    SINGLE_THREADED(SingleThreadedClaimStrategy.class);
 
     private final Class<? extends ClaimStrategy> claimStrategyClass;
 
