@@ -88,13 +88,13 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         this.waitForTaskToComplete = waitForTaskToComplete;
     }
 
-    @ManagedAttribute(description = "Disruptor claim strategy used by producers")
-    public DisruptorClaimStrategy getClaimStrategy() {
-        return claimStrategy;
+    @ManagedAttribute()
+    public ProducerType getProducerType() {
+        return producerType;
     }
 
-    public void setClaimStrategy(DisruptorClaimStrategy claimStrategy) {
-        this.claimStrategy = claimStrategy;
+    public void setProducerType(ProducerType producerType) {
+        this.producerType = producerType;
     }
 
     @ManagedAttribute(description = "Disruptor wait strategy used by consumers")
@@ -259,7 +259,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     private Disruptor<ExchangeEvent> newInitializedDisruptor() throws Exception {
 
         Disruptor<ExchangeEvent> newDisruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE,
-                delayedExecutor, claimStrategy.createClaimStrategyInstance(bufferSize),
+                bufferSize, delayedExecutor, producerType,
                 waitStrategy.createWaitStrategyInstance());
 
         activeEventHandlers = new HashSet<LifecycleAwareExchangeEventHandler>();
@@ -320,7 +320,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         RingBuffer<ExchangeEvent> ringBuffer = activeRingBuffer;
 
         long sequence = ringBuffer.next();
-        ringBuffer.get(sequence).setExchange(exchange);
+        ringBuffer.getPreallocated(sequence).setExchange(exchange);
         ringBuffer.publish(sequence);
     }
 

@@ -61,13 +61,13 @@ public enum DisruptorWaitStrategy {
 //     *
 //     * Spins, then yields, then blocks on the configured BlockingStrategy.
 //     */
-//    PhasedBackoff(PhasedBackoffWaitStrategy.class),
+//    PHASED_BACKOFF(PhasedBackoffWaitStrategy.class),
 
 //    TODO TimeoutBlockingWaitStrategy constructor requires parameters, unlike the other strategies. We leave it out for now
 //    /**
 //     * TODO, wait for documentation from LMAX
 //     */
-//    TimeoutBlocking(TimeoutBlockingWaitStrategy.class);
+//    TIMEOUT_BLOCKING(TimeoutBlockingWaitStrategy.class);
 
     private final Class<? extends WaitStrategy> waitStrategyClass;
 
