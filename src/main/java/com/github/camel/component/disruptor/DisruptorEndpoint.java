@@ -43,7 +43,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     private int concurrentConsumers;
     private boolean multipleConsumers;
     private ProducerType producerType = ProducerType.MULTI;
-    private DisruptorWaitStrategy waitStrategy = DisruptorWaitStrategy.Blocking;
+    private DisruptorWaitStrategy waitStrategy = DisruptorWaitStrategy.BLOCKING;
     private long timeout = 30000;
     private WaitForTaskToComplete waitForTaskToComplete = WaitForTaskToComplete.IfReplyExpected;
 
@@ -88,13 +88,13 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         this.waitForTaskToComplete = waitForTaskToComplete;
     }
 
-    @ManagedAttribute()
-    public ProducerType getProducerType() {
-        return producerType;
+    @ManagedAttribute(description = "Disruptor claim strategy used by producers")
+    public DisruptorClaimStrategy getClaimStrategy() {
+        return claimStrategy;
     }
 
-    public void setProducerType(ProducerType producerType) {
-        this.producerType = producerType;
+    public void setClaimStrategy(DisruptorClaimStrategy claimStrategy) {
+        this.claimStrategy = claimStrategy;
     }
 
     @ManagedAttribute(description = "Disruptor wait strategy used by consumers")
@@ -259,7 +259,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     private Disruptor<ExchangeEvent> newInitializedDisruptor() throws Exception {
 
         Disruptor<ExchangeEvent> newDisruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE,
-                bufferSize, delayedExecutor, producerType,
+                delayedExecutor, claimStrategy.createClaimStrategyInstance(bufferSize),
                 waitStrategy.createWaitStrategyInstance());
 
         activeEventHandlers = new HashSet<LifecycleAwareExchangeEventHandler>();
@@ -320,7 +320,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         RingBuffer<ExchangeEvent> ringBuffer = activeRingBuffer;
 
         long sequence = ringBuffer.next();
-        ringBuffer.getPreallocated(sequence).setExchange(exchange);
+        ringBuffer.get(sequence).setExchange(exchange);
         ringBuffer.publish(sequence);
     }
 
