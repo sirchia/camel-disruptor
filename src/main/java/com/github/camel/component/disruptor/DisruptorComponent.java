@@ -18,6 +18,7 @@ package com.github.camel.component.disruptor;
 
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
+import com.lmax.disruptor.dsl.ProducerType;
 import java.util.*;
 import java.util.concurrent.*;
 import org.apache.camel.Endpoint;
@@ -47,7 +48,7 @@ public class DisruptorComponent extends DefaultComponent {
 
     protected int defaultConcurrentConsumers = 1;
     private boolean defaultMultipleConsumers = false;
-    private DisruptorClaimStrategy defaultClaimStrategy = DisruptorClaimStrategy.MULTI_THREADED;
+    private ProducerType defaultProducerType = ProducerType.MULTI;
     private DisruptorWaitStrategy defaultWaitStrategy = DisruptorWaitStrategy.BLOCKING;
 
     private final Map<String, DisruptorReference> disruptors = new ConcurrentHashMap<String, DisruptorReference>();
@@ -79,18 +80,18 @@ public class DisruptorComponent extends DefaultComponent {
 
         DisruptorWaitStrategy waitStrategy = getAndRemoveParameter(parameters, "waitStrategy", DisruptorWaitStrategy.class, defaultWaitStrategy);
 
-        DisruptorClaimStrategy claimStrategy = getAndRemoveParameter(parameters, "claimStrategy", DisruptorClaimStrategy.class, defaultClaimStrategy);
+        ProducerType producerType = getAndRemoveParameter(parameters, "producerType", ProducerType.class, defaultProducerType);
 
         boolean multipleConsumers = getAndRemoveParameter(parameters, "multipleConsumers", boolean.class, defaultMultipleConsumers);
 
-        DisruptorReference disruptorReference = getOrCreateDisruptor(uri, size, claimStrategy, waitStrategy);
+        DisruptorReference disruptorReference = getOrCreateDisruptor(uri, size, defaultProducerType, waitStrategy);
         DisruptorEndpoint disruptorEndpoint = new DisruptorEndpoint(uri, this, disruptorReference, concurrentConsumers, multipleConsumers);
         disruptorEndpoint.configureProperties(parameters);
 
         return disruptorEndpoint;
     }
 
-    private synchronized DisruptorReference getOrCreateDisruptor(String uri, int size, DisruptorClaimStrategy claimStrategy, DisruptorWaitStrategy waitStrategy)
+    private synchronized DisruptorReference getOrCreateDisruptor(String uri, int size, ProducerType producerType, DisruptorWaitStrategy waitStrategy)
             throws Exception {
         String key = getDisruptorKey(uri);
 
@@ -106,7 +107,7 @@ public class DisruptorComponent extends DefaultComponent {
         }
         DisruptorReference ref = getDisruptors().get(key);
         if (ref == null) {
-            ref = new DisruptorReference(this, uri, powerOfTwo(sizeToUse), claimStrategy, waitStrategy);
+            ref = new DisruptorReference(this, uri, powerOfTwo(sizeToUse), producerType, waitStrategy);
             getDisruptors().put(key, ref);
         }
 
@@ -162,12 +163,12 @@ public class DisruptorComponent extends DefaultComponent {
         this.defaultMultipleConsumers = defaultMultipleConsumers;
     }
 
-    public DisruptorClaimStrategy getDefaultClaimStrategy() {
-        return defaultClaimStrategy;
+    public ProducerType getDefaultProducerType() {
+        return defaultProducerType;
     }
 
-    public void setDefaultClaimStrategy(DisruptorClaimStrategy defaultClaimStrategy) {
-        this.defaultClaimStrategy = defaultClaimStrategy;
+    public void setDefaultProducerType(ProducerType defaultProducerType) {
+        this.defaultProducerType = defaultProducerType;
     }
 
     public DisruptorWaitStrategy getDefaultWaitStrategy() {
@@ -217,7 +218,7 @@ public class DisruptorComponent extends DefaultComponent {
 
         private ExecutorService executor;
 
-        private final DisruptorClaimStrategy claimStrategy;
+        private final ProducerType producerType;
 
         private final int size;
 
@@ -227,19 +228,19 @@ public class DisruptorComponent extends DefaultComponent {
 
         private Queue<Exchange> temporaryExchangeBuffer;
 
-        private DisruptorReference(DisruptorComponent component, String uri, int size, DisruptorClaimStrategy claimStrategy, DisruptorWaitStrategy waitStrategy)
+        private DisruptorReference(DisruptorComponent component, String uri, int size, ProducerType producerType, DisruptorWaitStrategy waitStrategy)
                 throws Exception {
             this.component = component;
             this.uri = uri;
             this.size = size;
-            this.claimStrategy = claimStrategy;
+            this.producerType = producerType;
             this.waitStrategy = waitStrategy;
             temporaryExchangeBuffer = new ArrayBlockingQueue<Exchange>(size);
             reconfigure();
         }
 
         public void createDisruptor() throws Exception {
-            disruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE, delayedExecutor, claimStrategy.createClaimStrategyInstance(size),
+            disruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE, size, delayedExecutor, producerType,
                     waitStrategy.createWaitStrategyInstance());
         }
 
@@ -255,7 +256,7 @@ public class DisruptorComponent extends DefaultComponent {
             RingBuffer<ExchangeEvent> ringBuffer = disruptor.getRingBuffer();
 
             long sequence = ringBuffer.next();
-            ringBuffer.get(sequence).setExchange(exchange);
+            ringBuffer.getPreallocated(sequence).setExchange(exchange);
             ringBuffer.publish(sequence);
         }
 
