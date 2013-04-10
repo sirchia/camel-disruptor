@@ -53,6 +53,22 @@ public enum DisruptorWaitStrategy {
      */
     YIELDING(YieldingWaitStrategy.class);
 
+//    TODO PhasedBackoffWaitStrategy constructor requires parameters, unlike the other strategies. We leave it out for now
+//    /**
+//     * Phased wait strategy for waiting {@link EventProcessor}s on a barrier.<p/>
+//     *
+//     * This strategy can be used when throughput and low-latency are not as important as CPU resource.<\p></\p>
+//     *
+//     * Spins, then yields, then blocks on the configured BlockingStrategy.
+//     */
+//    PHASED_BACKOFF(PhasedBackoffWaitStrategy.class),
+
+//    TODO TimeoutBlockingWaitStrategy constructor requires parameters, unlike the other strategies. We leave it out for now
+//    /**
+//     * TODO, wait for documentation from LMAX
+//     */
+//    TIMEOUT_BLOCKING(TimeoutBlockingWaitStrategy.class);
+
     private final Class<? extends WaitStrategy> waitStrategyClass;
 
     private DisruptorWaitStrategy(Class<? extends WaitStrategy> waitStrategyClass) {

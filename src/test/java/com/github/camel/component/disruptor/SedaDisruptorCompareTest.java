@@ -36,7 +36,7 @@ import org.junit.runners.Parameterized;
  * This class does not perform any functional test, but instead makes a comparison between the performance of the
  * Disruptor and SEDA component in several use cases.
  *
- * As memory management may have great impact on the results, it is advices to run this test with a large, fixed heap
+ * As memory management may have great impact on the results, it is adviced to run this test with a large, fixed heap
  * (e.g. run with -Xmx1024m -Xms1024m JVM parameters)
  */
 @Ignore

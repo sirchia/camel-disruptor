@@ -125,7 +125,6 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         return new DisruptorConsumer(this, processor);
     }
 
-
     @Override
     protected void doStart() throws Exception {
         // notify reference we are shutting down this endpoint

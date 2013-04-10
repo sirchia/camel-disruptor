@@ -16,6 +16,7 @@
 
 package com.github.camel.component.disruptor;
 
+import com.lmax.disruptor.dsl.ProducerType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -45,14 +46,14 @@ public class DisruptorWaitClaimStrategyComponentTest extends CamelTestSupport {
 
     private static final Integer VALUE = Integer.valueOf(42);
 
-    private String claimStrategy;
+    private String producerType;
     private String waitStrategy;
     private String disruptorUri;
 
-    public DisruptorWaitClaimStrategyComponentTest(String waitStrategy, String claimStrategy) {
+    public DisruptorWaitClaimStrategyComponentTest(String waitStrategy, String producerType) {
 
         this.waitStrategy = waitStrategy;
-        this.claimStrategy = claimStrategy;
+        this.producerType = producerType;
     }
 
     @Parameters
@@ -60,8 +61,8 @@ public class DisruptorWaitClaimStrategyComponentTest extends CamelTestSupport {
         List<String[]> strategies = new ArrayList<String[]>();
 
         for (DisruptorWaitStrategy waitStrategy : DisruptorWaitStrategy.values()) {
-            for (DisruptorClaimStrategy claimStrategy : DisruptorClaimStrategy.values()) {
-                strategies.add(new String[] {waitStrategy.name(), claimStrategy.name()});
+            for (ProducerType producerType : ProducerType.values()) {
+                strategies.add(new String[] {waitStrategy.name(), producerType.name()});
             }
         }
 
@@ -84,7 +85,7 @@ public class DisruptorWaitClaimStrategyComponentTest extends CamelTestSupport {
     @Override
     protected RouteBuilder createRouteBuilder() throws Exception {
 
-        disruptorUri = "disruptor:test?waitStrategy=" + waitStrategy+"&claimStrategy=" + claimStrategy;
+        disruptorUri = "disruptor:test?waitStrategy=" + waitStrategy+"&producerType=" + producerType;
 
         return new RouteBuilder() {
             @Override
