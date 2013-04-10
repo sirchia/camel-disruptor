@@ -134,7 +134,7 @@ public class DisruptorProducer extends DefaultAsyncProducer {
                     // exchange. If false, it will simply disregard the exchange.
                     // But since the Property map is a Concurrent one, maybe we don't need the AtomicBoolean. Check with Simon.
                     // Also check the TimeoutHandler of the new Disruptor 3.0.0, consider making the switch to the latest version.
-                    exchange.setProperty("disruptor.ignoreExchange", true);
+                    exchange.setProperty(DisruptorEndpoint.DISRUPTOR_IGNORE_EXCHANGE, true);
 
                     // count down to indicate timeout
                     latch.countDown();

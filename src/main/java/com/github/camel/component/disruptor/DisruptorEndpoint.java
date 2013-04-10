@@ -33,6 +33,7 @@ import static com.github.camel.component.disruptor.DisruptorComponent.DisruptorR
 public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsumersSupport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DisruptorEndpoint.class);
+    public static final String DISRUPTOR_IGNORE_EXCHANGE = "disruptor.ignoreExchange";
 
     private final int concurrentConsumers;
     private final boolean multipleConsumers;

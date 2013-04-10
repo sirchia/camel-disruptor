@@ -173,7 +173,7 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
             //see http://code.google.com/p/disruptor/wiki/FrequentlyAskedQuestions#How_do_you_arrange_a_Disruptor_with_multiple_consumers_so_that_e
             if (sequence % concurrentConsumers == ordinal) {
                 Exchange exchange = event.getExchange();
-                boolean ignore = exchange.getProperty("disruptor.ignoreExchange", false, boolean.class);
+                boolean ignore = exchange.getProperty(DisruptorEndpoint.DISRUPTOR_IGNORE_EXCHANGE, false, boolean.class);
                 if (ignore) {
                     // Property was set and it was set to true, so don't process Exchange.
                     LOGGER.trace("Ignoring exchange {}", exchange);

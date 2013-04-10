@@ -436,7 +436,15 @@ public class DisruptorComponent extends DefaultComponent {
             @Override
             public void onEvent(ExchangeEvent event, long sequence, boolean endOfBatch) throws Exception {
                 blockingLatch.await();
-                temporaryExchangeBuffer.offer(event.getExchange());
+                Exchange exchange = event.getExchange();
+
+                if (exchange.getProperty(DisruptorEndpoint.DISRUPTOR_IGNORE_EXCHANGE, false, boolean.class)) {
+                    // Property was set and it was set to true, so don't process Exchange.
+                    LOGGER.trace("Ignoring exchange {}", exchange);
+                    return;
+                } else {
+                    temporaryExchangeBuffer.offer(exchange);
+                }
             }
 
             public void unblock() {
