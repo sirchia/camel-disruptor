@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
  * This interface fuses the EventHandler and LifecycleAware interfaces.
  * It also provides a handle to await the termination of this EventHandler.
  */
-public interface LifecycleAwareExchangeEventHandler extends EventHandler<ExchangeEvent>, LifecycleAware {
+interface LifecycleAwareExchangeEventHandler extends EventHandler<ExchangeEvent>, LifecycleAware {
 
     /**
      * Causes the current thread to wait until the event handler has been

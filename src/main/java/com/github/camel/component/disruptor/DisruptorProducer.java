@@ -59,16 +59,6 @@ public class DisruptorProducer extends DefaultAsyncProducer {
     }
 
     @Override
-    protected void doSuspend() throws Exception {
-        getEndpoint().onStopped(this);
-    }
-
-    @Override
-    protected void doResume() throws Exception {
-        getEndpoint().onStarted(this);
-    }
-
-    @Override
     public boolean process(final Exchange exchange, final AsyncCallback callback) {
         WaitForTaskToComplete wait = waitForTaskToComplete;
         if (exchange.getProperty(Exchange.ASYNC_WAIT) != null) {
@@ -136,8 +126,16 @@ public class DisruptorProducer extends DefaultAsyncProducer {
                 }
                 if (!done) {
                     exchange.setException(new ExchangeTimedOutException(exchange, timeout));
-                    // TODO: we can't remove the copy from the ringbuffer as is done in the SEDA endpoint
-                    //endpoint.getQueue().remove(copy);
+                    // Remove timed out Exchange from disruptor
+                    // endpoint.
+                    // TODO Remove exchange from disruptor. Maybe do this by setting a Property on the exchange and the value
+                    // would be an AtomicBoolean. This is set by the Producer and the Consumer would look up that Property and
+                    // check the AtomicBOolean. If the AtomicBoolean says that we are good to proceed, it will process the
+                    // exchange. If false, it will simply disregard the exchange.
+                    // But since the Property map is a Concurrent one, maybe we don't need the AtomicBoolean. Check with Simon.
+                    // Also check the TimeoutHandler of the new Disruptor 3.0.0, consider making the switch to the latest version.
+                    exchange.setProperty("disruptor.ignoreExchange", true);
+
                     // count down to indicate timeout
                     latch.countDown();
                 }
@@ -170,7 +168,7 @@ public class DisruptorProducer extends DefaultAsyncProducer {
     protected Exchange prepareCopy(Exchange exchange, boolean handover) {
         // use a new copy of the exchange to route async
         Exchange copy = ExchangeHelper.createCorrelatedCopy(exchange, handover);
-        // set a new from endpoint to be the seda queue
+        // set a new from endpoint to be the disruptor
         copy.setFromEndpoint(endpoint);
         return copy;
     }

@@ -17,14 +17,11 @@
 package com.github.camel.component.disruptor;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import org.apache.camel.*;
 import org.apache.camel.impl.LoggingExceptionHandler;
 import org.apache.camel.spi.ExceptionHandler;
-import org.apache.camel.spi.Synchronization;
+import org.apache.camel.spi.ShutdownAware;
 import org.apache.camel.support.ServiceSupport;
 import org.apache.camel.util.AsyncProcessorConverterHelper;
 import org.apache.camel.util.AsyncProcessorHelper;
@@ -35,9 +32,9 @@ import org.slf4j.LoggerFactory;
 /**
  * TODO: documentation
  */
-public class DisruptorConsumer extends ServiceSupport implements Consumer, SuspendableService {
+public class DisruptorConsumer extends ServiceSupport implements Consumer, SuspendableService, ShutdownAware {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DisruptorConsumer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DisruptorConsumer.class);
 
     private final DisruptorEndpoint endpoint;
     private final AsyncProcessor processor;
@@ -94,6 +91,29 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
         return eventHandlers;
     }
 
+    @Override
+    public boolean deferShutdown(ShutdownRunningTask shutdownRunningTask) {
+        // deny stopping on shutdown as we want disruptor consumers to run in case some other queues
+        // depend on this consumer to run, so it can complete its exchanges
+        return true;
+    }
+
+    @Override
+    public void prepareShutdown(boolean forced) {
+        // nothing
+    }
+
+    @Override
+    public int getPendingExchangesSize() {
+        //TODO check thread safe?
+        return getEndpoint().getDisruptor().size();
+    }
+
+    @Override
+    public String toString() {
+        return "DisruptorConsumer[" + endpoint + "]";
+    }
+
     private Exchange prepareExchange(Exchange exchange) {
         // send a new copied exchange with new camel context
         Exchange newExchange = ExchangeHelper.copyExchangeAndSetCamelContext(exchange, endpoint.getCamelContext());
@@ -113,12 +133,16 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
                 throw new IllegalStateException("Multiple consumers for the same endpoint is not allowed: " + endpoint);
             }
 
-            // handover completions, as we need to done this when the multicast is done
-            final List<Synchronization> completions = exchange.handoverCompletions();
-
-
             // send a new copied exchange with new camel context
             exchange = prepareExchange(exchange);
+        } else {
+            //we don't need to copy the exchange (as only one consumer will process it
+            //but we do set the FromEndpoint to remain compatible with the behaviour of the SEDA endpoint
+            exchange.setFromEndpoint(endpoint);
+
+            //also clear the FromRouteId to have the unit of work processor set it to our route id
+            //as would have happened when we created a new exchange
+            exchange.setFromRouteId(null);
         }
 
         // use the regular processor and use the asynchronous routing engine to support it
@@ -129,16 +153,12 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
         });
     }
 
-    private class ConsumerEventHandler implements LifecycleAwareExchangeEventHandler {
+    private class ConsumerEventHandler extends AbstractLifecycleAwareExchangeEventHandler {
 
         private final int ordinal;
         private final int concurrentConsumers;
-        private volatile boolean started = false;
-        private volatile CountDownLatch startedLatch = new CountDownLatch(1);
-        private volatile CountDownLatch stoppedLatch = new CountDownLatch(1);
 
         public ConsumerEventHandler(int ordinal, int concurrentConsumers) {
-
             this.ordinal = ordinal;
             this.concurrentConsumers = concurrentConsumers;
         }
@@ -153,6 +173,12 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
             //see http://code.google.com/p/disruptor/wiki/FrequentlyAskedQuestions#How_do_you_arrange_a_Disruptor_with_multiple_consumers_so_that_e
             if (sequence % concurrentConsumers == ordinal) {
                 Exchange exchange = event.getExchange();
+                boolean ignore = exchange.getProperty("disruptor.ignoreExchange", false, boolean.class);
+                if (ignore) {
+                    // Property was set and it was set to true, so don't process Exchange.
+                    LOGGER.trace("Ignoring exchange {}", exchange);
+                    return;
+                }
 
                 try {
                     process(exchange);
@@ -164,44 +190,6 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
                     }
                 }
             }
-        }
-
-        @Override
-        public void awaitStarted() throws InterruptedException {
-            if (!started) {
-                startedLatch.await();
-            }
-        }
-
-        @Override
-        public boolean awaitStarted(long timeout, TimeUnit unit) throws InterruptedException {
-            return started || startedLatch.await(timeout, unit);
-        }
-
-        @Override
-        public void awaitStopped() throws InterruptedException {
-            if (started) {
-                stoppedLatch.await();
-            }
-        }
-
-        @Override
-        public boolean awaitStopped(long timeout, TimeUnit unit) throws InterruptedException {
-            return !started || stoppedLatch.await(timeout, unit);
-        }
-
-        @Override
-        public void onStart() {
-            stoppedLatch = new CountDownLatch(1);
-            startedLatch.countDown();
-            started = true;
-        }
-
-        @Override
-        public void onShutdown() {
-            startedLatch = new CountDownLatch(1);
-            stoppedLatch.countDown();
-            started = false;
         }
     }
 }

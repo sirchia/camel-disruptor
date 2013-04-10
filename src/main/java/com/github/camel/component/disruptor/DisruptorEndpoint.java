@@ -16,15 +16,16 @@
 
 package com.github.camel.component.disruptor;
 
-import com.lmax.disruptor.RingBuffer;
-import com.lmax.disruptor.dsl.Disruptor;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArraySet;
 import org.apache.camel.*;
 import org.apache.camel.api.management.ManagedAttribute;
+import org.apache.camel.api.management.ManagedOperation;
 import org.apache.camel.impl.DefaultEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.github.camel.component.disruptor.DisruptorComponent.DisruptorReference;
 
 /**
  * TODO: documentation
@@ -33,46 +34,34 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DisruptorEndpoint.class);
 
-    private volatile RingBuffer<ExchangeEvent> activeRingBuffer;
-
-    private final DelayedExecutor delayedExecutor = new DelayedExecutor();
-
-    private final String endpointUri;
-    private int bufferSize = 1024;
-    private int concurrentConsumers;
-    private boolean multipleConsumers;
-    private DisruptorClaimStrategy claimStrategy = DisruptorClaimStrategy.MULTI_THREADED;
-    private DisruptorWaitStrategy waitStrategy = DisruptorWaitStrategy.BLOCKING;
-    private long timeout = 30000;
+    private final int concurrentConsumers;
+    private final boolean multipleConsumers;
     private WaitForTaskToComplete waitForTaskToComplete = WaitForTaskToComplete.IfReplyExpected;
+
+    private long timeout = 30000;
 
     private final Set<DisruptorProducer> producers = new CopyOnWriteArraySet<DisruptorProducer>();
     private final Set<DisruptorConsumer> consumers = new CopyOnWriteArraySet<DisruptorConsumer>();
 
-    //access to the following fields have synchronized access all guarded by 'this'
-    private ExecutorService executor;
-    private Disruptor<ExchangeEvent> disruptor;
-    private Set<LifecycleAwareExchangeEventHandler> activeEventHandlers;
+    private final DisruptorReference disruptorReference;
 
-    public DisruptorEndpoint(String endpointUri, DisruptorComponent component, int concurrentConsumers) {
+    public DisruptorEndpoint(String endpointUri, Component component, DisruptorReference disruptorReference, int concurrentConsumers, boolean multipleConsumers) throws Exception {
         super(endpointUri, component);
-        this.endpointUri = endpointUri;
+    this.disruptorReference = disruptorReference;
         this.concurrentConsumers = concurrentConsumers;
+    this.multipleConsumers = multipleConsumers;
     }
 
-    @ManagedAttribute(description = "Buffer max capacity (rounded up to next power of 2)")
-    public int getBufferSize() {
-        return bufferSize;
+    @ManagedAttribute(description = "Buffer max capacity")
+    public int getSize() {
+        return disruptorReference.getBufferSize();
     }
 
-    public void setBufferSize(int size) {
-        this.bufferSize = size;
+    @ManagedOperation(description = "Remaining capacity in ring buffer")
+    public long remainingCapacity() {
+        return getDisruptor().remainingCapacity();
     }
 
-
-    public void setConcurrentConsumers(int concurrentConsumers) {
-        this.concurrentConsumers = concurrentConsumers;
-    }
 
     @ManagedAttribute(description = "Number of concurrent consumers")
     public int getConcurrentConsumers() {
@@ -87,24 +76,6 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         this.waitForTaskToComplete = waitForTaskToComplete;
     }
 
-    @ManagedAttribute(description = "Disruptor claim strategy used by producers")
-    public DisruptorClaimStrategy getClaimStrategy() {
-        return claimStrategy;
-    }
-
-    public void setClaimStrategy(DisruptorClaimStrategy claimStrategy) {
-        this.claimStrategy = claimStrategy;
-    }
-
-    @ManagedAttribute(description = "Disruptor wait strategy used by consumers")
-    public DisruptorWaitStrategy getWaitStrategy() {
-        return waitStrategy;
-    }
-
-    public void setWaitStrategy(DisruptorWaitStrategy waitStrategy) {
-        this.waitStrategy = waitStrategy;
-    }
-
     @ManagedAttribute
     public long getTimeout() {
         return timeout;
@@ -117,10 +88,6 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     @ManagedAttribute
     public boolean isMultipleConsumers() {
         return multipleConsumers;
-    }
-
-    public void setMultipleConsumers(boolean multipleConsumers) {
-        this.multipleConsumers = multipleConsumers;
     }
 
     /**
@@ -150,7 +117,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     @Override
     public Producer createProducer() throws Exception {
-        return new DisruptorProducer(this, waitForTaskToComplete, timeout);
+        return new DisruptorProducer(this, getWaitForTaskToComplete(), getTimeout());
     }
 
     @Override
@@ -158,29 +125,38 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         return new DisruptorConsumer(this, processor);
     }
 
+
+    @Override
+    protected void doStart() throws Exception {
+        // notify reference we are shutting down this endpoint
+        disruptorReference.addEndpoint(this);
+
+        super.doStart();    //To change body of overridden methods use File | Settings | File Templates.
+    }
+
     @Override
     protected void doStop() throws Exception {
-        synchronized (this) {
-            stopDisruptorAndAwaitActiveConsumers();
-        }
+        // notify reference we are shutting down this endpoint
+        disruptorReference.removeEndpoint(this);
 
-        super.doStop();
+        super.doStop();    //To change body of overridden methods use File | Settings | File Templates.
     }
 
     @Override
     public DisruptorComponent getComponent() {
-        return (DisruptorComponent)super.getComponent();
+        return (DisruptorComponent) super.getComponent();
     }
 
     void onStarted(DisruptorConsumer consumer) throws Exception {
         synchronized (this) {
             if (consumers.add(consumer)) {
-                LOGGER.debug("Starting consumer {} on endpoint {}", consumer, endpointUri);
+                LOGGER.debug("Starting consumer {} on endpoint {}", consumer, getEndpointUri());
 
-                reconfigureDisruptor();
+                getDisruptor().reconfigure();
+
             } else {
                 LOGGER.debug("Tried to start Consumer {} on endpoint {} but it was already started", consumer,
-                        endpointUri);
+                        getEndpointUri());
             }
         }
 
@@ -191,12 +167,13 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         synchronized (this) {
 
             if (consumers.remove(consumer)) {
-                LOGGER.debug("Stopping consumer {} on endpoint {}", consumer, endpointUri);
+                LOGGER.debug("Stopping consumer {} on endpoint {}", consumer, getEndpointUri());
 
-                reconfigureDisruptor();
+                getDisruptor().reconfigure();
+
             } else {
                 LOGGER.debug("Tried to stop Consumer {} on endpoint {} but it was already stopped", consumer,
-                        endpointUri);
+                        getEndpointUri());
             }
 
 
@@ -211,103 +188,14 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         producers.remove(producer);
     }
 
-    /**
-     * This method awaits completion of previously active consumers, and reconfigures and starts a new disruptor with
-     * the currently active consumers.
-     *
-     * @throws Exception
-     */
-    private void reconfigureDisruptor() throws Exception {
-        stopDisruptorAndAwaitActiveConsumers();
+    Collection<LifecycleAwareExchangeEventHandler> createConsumerEventHandlers() {
+        List<LifecycleAwareExchangeEventHandler> eventHandlers = new ArrayList<LifecycleAwareExchangeEventHandler>();
 
-        disruptor = newInitializedDisruptor();
-
-        //everything is now done and we are ready to start our new eventhandlers
-        //start by resizing our executor to match the new state
-        resizeThreadPoolExecutor(activeEventHandlers.size());
-
-        if (executor != null) {
-            //and use our delayed executor to really really execute the event handlers now
-            delayedExecutor.executeDelayedCommands(executor);
-        }
-
-        //make sure all event handlers are correctly started before we continue
-        for (LifecycleAwareExchangeEventHandler eventHandler : activeEventHandlers) {
-            boolean eventHandlerStarted = false;
-            while (!eventHandlerStarted) {
-                try {
-                    //The disruptor start command executed above should have triggered a start signal to all
-                    //event processors which, in their death, should notify our event handlers. They respond by
-                    //switching a latch and we want to await that latch here to make sure they are started.
-                    if (!eventHandler.awaitStarted(10, TimeUnit.SECONDS)) {
-                        //we wait for a relatively long, but limited amount of time to prevent an application using
-                        //this component from hanging indefinitely
-                        //Please report a bug if you can repruduce this
-                        LOGGER.error("Disruptor/event handler failed to start properly, PLEASE REPORT");
-                    }
-                    eventHandlerStarted = true;
-                } catch (InterruptedException e) {
-                    //just retry
-                }
-            }
-        }
-
-        //Done! let her rip!
-    }
-
-    private Disruptor<ExchangeEvent> newInitializedDisruptor() throws Exception {
-
-        Disruptor<ExchangeEvent> newDisruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE,
-                delayedExecutor, claimStrategy.createClaimStrategyInstance(bufferSize),
-                waitStrategy.createWaitStrategyInstance());
-
-        activeEventHandlers = new HashSet<LifecycleAwareExchangeEventHandler>();
-        //create eventhandlers for each consumer and add them to the new set of registeredEventHandlers
         for (DisruptorConsumer consumer : consumers) {
-            activeEventHandlers.addAll(consumer.createEventHandlers(concurrentConsumers));
+            eventHandlers.addAll(consumer.createEventHandlers(concurrentConsumers));
         }
 
-        //register the event handlers with the Disruptor
-        newDisruptor.handleEventsWith(new ArrayList<LifecycleAwareExchangeEventHandler>(activeEventHandlers)
-                .toArray(new LifecycleAwareExchangeEventHandler[activeEventHandlers.size()]));
-
-        //call start on the disruptor to finalize its initialization and
-        //atomically swap the new ringbuffer with the old one to prevent producers from adding more exchanges to it.
-        activeRingBuffer = newDisruptor.start();
-
-        return newDisruptor;
-    }
-
-    private void stopDisruptorAndAwaitActiveConsumers() {
-        //Now shutdown the currently active Disruptor and stop all consumers registered there.
-        if (disruptor != null) {
-            disruptor.shutdown();
-
-            //they have already been given a trigger to halt when they are done by shutting down the disruptor
-            //we do however want to await their completion before they are scheduled to process events from the new
-            for (LifecycleAwareExchangeEventHandler eventHandler : activeEventHandlers) {
-                boolean eventHandlerFinished = false;
-                //the disruptor is now empty and all consumers are either done or busy processing their last exchange
-                while (!eventHandlerFinished) {
-                    try {
-                        //The disruptor shutdown command executed above should have triggered a halt signal to all
-                        //event processors which, in their death, should notify our event handlers. They respond by
-                        //switching a latch and we want to await that latch here to make sure they are done.
-                        if (!eventHandler.awaitStopped(105, TimeUnit.SECONDS)) {
-                            //we wait for a relatively long, but limited amount of time to prevent an application using
-                            //this component from hanging indefinitely
-                            //Please report a bug if you can repruduce this
-                            LOGGER.error("Disruptor/event handler failed to shut down properly, PLEASE REPORT");
-                        }
-                        eventHandlerFinished = true;
-                    } catch (InterruptedException e) {
-                        //just retry
-                    }
-                }
-            }
-
-            disruptor = null;
-        }
+        return eventHandlers;
     }
 
     /**
@@ -316,65 +204,11 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
      * @param exchange
      */
     public void publish(Exchange exchange) {
-        RingBuffer<ExchangeEvent> ringBuffer = activeRingBuffer;
-
-        long sequence = ringBuffer.next();
-        ringBuffer.get(sequence).setExchange(exchange);
-        ringBuffer.publish(sequence);
+        disruptorReference.publish(exchange);
     }
 
-    private void resizeThreadPoolExecutor(int newSize) {
-        if (executor == null && newSize > 0) {
-            //no thread pool executor yet, create a new one
-            executor = getCamelContext().getExecutorServiceManager().newFixedThreadPool(this, endpointUri,
-                    newSize);
-        } else if (executor != null && newSize <= 0) {
-            //we need to shut down our executor
-            getCamelContext().getExecutorServiceManager().shutdown(executor);
-            executor = null;
-        } else if (executor instanceof ThreadPoolExecutor) {
-            //our thread pool executor is of type ThreadPoolExecutor, we know how to resize it
-            ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) executor;
-            threadPoolExecutor.setCorePoolSize(newSize);
-            threadPoolExecutor.setMaximumPoolSize(newSize);
-        } else {
-            //hmmm...no idea what kind of executor this is...just kill it and start fresh
-            getCamelContext().getExecutorServiceManager().shutdown(executor);
-
-            executor = getCamelContext().getExecutorServiceManager().newFixedThreadPool(this, endpointUri,
-                    newSize);
-        }
-    }
-
-
-    /**
-     * When a consumer is added or removed, we need to create a new Disruptor due to its static configuration.
-     * However, we would like to reuse our thread pool executor and only add or remove the threads we need.
-     *
-     * On a reconfiguration of the Disruptor, we need to atomically swap the current RingBuffer with a new and fully
-     * configured one in order to keep the producers operational without the risk of losing messages.
-     *
-     * Configuration of a RingBuffer by the Disruptor's start method has a side effect that immediately starts execution
-     * of the event processors (consumers) on the Executor passed as a constructor argument which is stored in a
-     * final field. In order to be able to delay actual execution of the event processors until the event processors of
-     * the previous RingBuffer are done processing and the thread pool executor has been resized to match the new
-     * consumer count, we delay their execution using this class.
-     */
-    private static class DelayedExecutor implements Executor {
-
-        private static Queue<Runnable> delayedCommands = new LinkedList<Runnable>();
-
-        @Override
-        public void execute(Runnable command) {
-            delayedCommands.offer(command);
-        }
-
-        public void executeDelayedCommands(Executor actualExecutor) {
-            Runnable command;
-
-            while ((command = delayedCommands.poll()) != null) {
-                actualExecutor.execute(command);
-            }
-        }
+    public DisruptorReference getDisruptor()
+    {
+        return disruptorReference;
     }
 }
