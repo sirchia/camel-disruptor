@@ -126,8 +126,7 @@ public class DisruptorProducer extends DefaultAsyncProducer {
                 }
                 if (!done) {
                     exchange.setException(new ExchangeTimedOutException(exchange, timeout));
-                    // Remove timed out Exchange from disruptor
-                    // endpoint.
+                    // Remove timed out Exchange from disruptor endpoint.
                     // TODO Remove exchange from disruptor. Maybe do this by setting a Property on the exchange and the value
                     // would be an AtomicBoolean. This is set by the Producer and the Consumer would look up that Property and
                     // check the AtomicBOolean. If the AtomicBoolean says that we are good to proceed, it will process the
