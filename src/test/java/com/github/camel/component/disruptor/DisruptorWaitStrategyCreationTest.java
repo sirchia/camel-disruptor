@@ -19,8 +19,8 @@ package com.github.camel.component.disruptor;
 import com.lmax.disruptor.WaitStrategy;
 import org.junit.Test;
 
-import static junit.framework.Assert.assertNotNull;
-import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests correct creation of all supposedly possible wait strategies.

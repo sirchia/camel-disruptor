@@ -256,7 +256,7 @@ public class DisruptorComponent extends DefaultComponent {
             RingBuffer<ExchangeEvent> ringBuffer = disruptor.getRingBuffer();
 
             long sequence = ringBuffer.next();
-            ringBuffer.getPreallocated(sequence).setExchange(exchange);
+            ringBuffer.get(sequence).setExchange(exchange);
             ringBuffer.publish(sequence);
         }
 
