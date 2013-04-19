@@ -28,7 +28,6 @@ import org.apache.camel.*;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.test.junit4.CamelTestSupport;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -40,7 +39,6 @@ import org.junit.runners.Parameterized;
  * As memory management may have great impact on the results, it is adviced to run this test with a large, fixed heap
  * (e.g. run with -Xmx1024m -Xms1024m JVM parameters)
  */
-@Ignore
 @RunWith(value = Parameterized.class)
 public class SedaDisruptorCompareTest extends CamelTestSupport {
 
@@ -111,7 +109,7 @@ public class SedaDisruptorCompareTest extends CamelTestSupport {
         // This parameter set can be compared to the next and shows the impact of a 'long' endpoint name
         // It defines all parameters to the same values as the default, so the result should be the same as
         // 'seda:speedtest'. This shows that disruptor has a slight disadvantage as its name is longer than 'seda' :)
-        parameters.add(new Object[]{"SEDA LONG (1P, 1C, 1CCT)", "seda:speedtest?concurrentConsumers=1&waitForTaskToComplete=IfReplyExpected&timeout=30000&multipleConsumers=false&limitConcurrentConsumers=true&blockWhenFull=false", singleProducer(), singleConsumer(),
+        parameters.add(new Object[]{"SEDA LONG (1P, 1C, 1CCT)", "seda:speedtest?concurrentConsumers=1&waitForTaskToComplete=IfReplyExpected&timeout=30000&multipleConsumers=false&limitConcurrentConsumers=true&blockWhenFull=true&size=1024", singleProducer(), singleConsumer(),
                 singleConcurrentConsumerThread()});
         addParameterPair(parameters, singleProducer(), singleConsumer(), singleConcurrentConsumerThread());
         addParameterPair(parameters, singleProducer(), singleConsumer(), multipleConcurrentConsumerThreads());
@@ -130,9 +128,6 @@ public class SedaDisruptorCompareTest extends CamelTestSupport {
         String concurrentConsumerOptions = (parallelConsumerThreads > 1 ? "concurrentConsumers=" + parallelConsumerThreads : "");
 
         String options = "";
-        if (!multipleConsumerOption.isEmpty() || !concurrentConsumerOptions.isEmpty()) {
-            options += "?";
-        }
 
         if (!multipleConsumerOption.isEmpty()) {
             options += multipleConsumerOption;
@@ -144,8 +139,11 @@ public class SedaDisruptorCompareTest extends CamelTestSupport {
             options += concurrentConsumerOptions;
         }
 
-        parameters.add(new Object[]{"SEDA", "seda:speedtest" + options, producers, consumers, parallelConsumerThreads});
-        parameters.add(new Object[]{"Disruptor", "disruptor:speedtest" + options, producers, consumers, parallelConsumerThreads});
+        String sedaOptions = "?size=1024&blockWhenFull=true" + (options.isEmpty() ? "" : "&");
+        String disruptorOptions = options.isEmpty() ? "" : "?";
+
+        parameters.add(new Object[]{"SEDA", "seda:speedtest" + sedaOptions + options, producers, consumers, parallelConsumerThreads});
+        parameters.add(new Object[]{"Disruptor", "disruptor:speedtest" + disruptorOptions + options, producers, consumers, parallelConsumerThreads});
     }
 
     @Test
