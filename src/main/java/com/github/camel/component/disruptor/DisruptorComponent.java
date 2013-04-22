@@ -328,10 +328,10 @@ public class DisruptorComponent extends DefaultComponent {
         private void shutdown() {
             if (disruptor != null) {
                 //check if we had a blocking event handler to keep an empty disruptor 'busy'
-                if (handlers != null && handlers.length == 1 && handlers[0] instanceof BlockingExhangeEventHandler) {
+                if (handlers != null && handlers.length == 1 && handlers[0] instanceof BlockingExchangeEventHandler) {
                     //yes we did, unblock it so we can get rid of our backlog empty its pending exchanged in our temporary buffer
-                    BlockingExhangeEventHandler blockingExhangeEventHandler = (DisruptorReference.BlockingExhangeEventHandler) handlers[0];
-                    blockingExhangeEventHandler.unblock();
+                    BlockingExchangeEventHandler blockingExchangeEventHandler = (BlockingExchangeEventHandler) handlers[0];
+                    blockingExchangeEventHandler.unblock();
                 }
 
                 disruptor.shutdown();
@@ -373,7 +373,7 @@ public class DisruptorComponent extends DefaultComponent {
         private void handleEventsWith(LifecycleAwareExchangeEventHandler[] newHandlers) {
             if (newHandlers == null || newHandlers.length == 0) {
                 handlers = new LifecycleAwareExchangeEventHandler[1];
-                handlers[0] = new BlockingExhangeEventHandler();
+                handlers[0] = new BlockingExchangeEventHandler();
             } else {
                 handlers = newHandlers;
             }
@@ -430,7 +430,7 @@ public class DisruptorComponent extends DefaultComponent {
             }
         }
 
-        private class BlockingExhangeEventHandler extends AbstractLifecycleAwareExchangeEventHandler {
+        private class BlockingExchangeEventHandler extends AbstractLifecycleAwareExchangeEventHandler {
             private CountDownLatch blockingLatch = new CountDownLatch(1);
 
             @Override
