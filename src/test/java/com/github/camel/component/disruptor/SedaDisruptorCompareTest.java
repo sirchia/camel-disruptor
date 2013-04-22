@@ -36,7 +36,6 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.seda.SedaEndpoint;
 import org.apache.camel.test.junit4.CamelTestSupport;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -49,7 +48,6 @@ import com.lmax.disruptor.collections.Histogram;
  * <p/>
  * As memory management may have great impact on the results, it is adviced to run this test with a large, fixed heap (e.g. run with -Xmx1024m -Xms1024m JVM parameters)
  */
-@Ignore
 @RunWith(value = Parameterized.class)
 public class SedaDisruptorCompareTest extends CamelTestSupport {
 
@@ -133,6 +131,7 @@ public class SedaDisruptorCompareTest extends CamelTestSupport {
         // It defines all parameters to the same values as the default, so the result should be the same as
         // 'seda:speedtest'. This shows that disruptor has a slight disadvantage as its name is longer than 'seda' :)
         // TODO: Figure out why the LONG test takes so long. Check for endpoint parsing every time we access endpoint
+        // TODO: add size parameter
         parameters.add(new Object[] { "SEDA LONG {1P, 1C, 1CCT}", "seda:speedtest?concurrentConsumers=1&waitForTaskToComplete=IfReplyExpected&timeout=30000&multipleConsumers=false&limitConcurrentConsumers=true&blockWhenFull=false", singleProducer(), singleConsumer(),
                 singleConcurrentConsumerThread(), SEDA_SIZE_HISTOGRAM_BOUNDS });
         addParameterPair(parameters, singleProducer(), singleConsumer(), singleConcurrentConsumerThread());
@@ -164,7 +163,6 @@ public class SedaDisruptorCompareTest extends CamelTestSupport {
             }
             options += multipleConsumerOption;
         }
-
         if (!concurrentConsumerOptions.isEmpty()) {
             if (!options.isEmpty()) {
                 options += "&";
