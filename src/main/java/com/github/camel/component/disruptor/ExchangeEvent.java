@@ -19,11 +19,11 @@ package com.github.camel.component.disruptor;
 import org.apache.camel.Exchange;
 
 /**
- * TODO: documentation
+ * This is a mutable reference to an {@link Exchange}, used as contents of the Disruptors ringbuffer
  */
 public class ExchangeEvent {
 
-    private volatile Exchange exchange;
+    private Exchange exchange;
 
     public Exchange getExchange() {
         return exchange;

@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * TODO: documentation
+ * A Consumer for the Disruptor component.
  */
 public class DisruptorConsumer extends ServiceSupport implements Consumer, SuspendableService, ShutdownAware {
 
@@ -38,6 +38,8 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
 
     private final DisruptorEndpoint endpoint;
     private final AsyncProcessor processor;
+    private final AsyncCallback noopAsyncCallback = new NoopAsyncCallback();
+
     private ExceptionHandler exceptionHandler;
 
     public DisruptorConsumer(DisruptorEndpoint endpoint, Processor processor) {
@@ -81,7 +83,7 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
         getEndpoint().onStarted(this);
     }
 
-    public Set<LifecycleAwareExchangeEventHandler> createEventHandlers(int concurrentConsumers) {
+    Set<LifecycleAwareExchangeEventHandler> createEventHandlers(int concurrentConsumers) {
         Set<LifecycleAwareExchangeEventHandler> eventHandlers = new HashSet<LifecycleAwareExchangeEventHandler>();
 
         for (int i = 0; i < concurrentConsumers; ++i) {
@@ -105,8 +107,7 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
 
     @Override
     public int getPendingExchangesSize() {
-        //TODO check thread safe?
-        return getEndpoint().getDisruptor().size();
+        return getEndpoint().getDisruptor().getPendingExchangeSize();
     }
 
     @Override
@@ -146,18 +147,18 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
         }
 
         // use the regular processor and use the asynchronous routing engine to support it
-        AsyncProcessorHelper.process(processor, exchange, new AsyncCallback() {
-            public void done(boolean doneSync) {
-                // noop
-            }
-        });
+        AsyncProcessorHelper.process(processor, exchange, noopAsyncCallback);
     }
 
+    /**
+     * Implementation of the {@link LifecycleAwareExchangeEventHandler} interface that passes all Exchanges to the
+     * {@link Processor} registered at this {@link DisruptorConsumer}.
+     */
     private class ConsumerEventHandler extends AbstractLifecycleAwareExchangeEventHandler {
 
         private final int ordinal;
-        private final int concurrentConsumers;
 
+        private final int concurrentConsumers;
         public ConsumerEventHandler(int ordinal, int concurrentConsumers) {
             this.ordinal = ordinal;
             this.concurrentConsumers = concurrentConsumers;
@@ -190,6 +191,13 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
                     }
                 }
             }
+        }
+
+    }
+
+    private static class NoopAsyncCallback implements AsyncCallback {
+        public void done(boolean doneSync) {
+            // noop
         }
     }
 }

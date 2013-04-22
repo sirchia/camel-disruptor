@@ -15,7 +15,6 @@
  */
 package com.github.camel.component.disruptor;
 
-import com.github.camel.component.disruptor.DisruptorConsumer;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.test.junit4.CamelTestSupport;

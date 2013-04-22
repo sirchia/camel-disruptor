@@ -15,6 +15,7 @@
  */
 package com.github.camel.component.disruptor;
 
+import org.apache.camel.WaitForTaskToComplete;
 import org.apache.camel.test.junit4.CamelTestSupport;
 import org.junit.Test;
 
@@ -25,6 +26,24 @@ public class DisruptorConfigureTest extends CamelTestSupport {
     @Test
     public void testSizeConfigured() throws Exception {
         DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo?size=2000", DisruptorEndpoint.class);
+        assertEquals("size", 2048, endpoint.getSize());
+        assertEquals("remainingCapacity", 2048, endpoint.remainingCapacity());
+    }
+
+    @Test
+    public void testSizeThroughBufferSizeComponentProperty() throws Exception {
+        DisruptorComponent disruptor = context.getComponent("disruptor", DisruptorComponent.class);
+        disruptor.setBufferSize(2000);
+        DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
+        assertEquals("size", 2048, endpoint.getSize());
+        assertEquals("remainingCapacity", 2048, endpoint.remainingCapacity());
+    }
+
+    @Test
+    public void testSizeThroughQueueSizeComponentProperty() throws Exception {
+        DisruptorComponent disruptor = context.getComponent("disruptor", DisruptorComponent.class);
+        disruptor.setQueueSize(2000);
+        DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
         assertEquals("size", 2048, endpoint.getSize());
         assertEquals("remainingCapacity", 2048, endpoint.remainingCapacity());
     }
@@ -41,5 +60,7 @@ public class DisruptorConfigureTest extends CamelTestSupport {
         assertEquals("concurrentConsumers: wrong default", 1, endpoint.getConcurrentConsumers());
         assertEquals("bufferSize: wrong default", DisruptorComponent.DEFAULT_BUFFER_SIZE, endpoint.getSize());
         assertEquals("timeout: wrong default", 30000L, endpoint.getTimeout());
+        assertEquals("IfReplyExpected: wrong default", WaitForTaskToComplete.IfReplyExpected, endpoint.getWaitForTaskToComplete());
+        assertEquals("DisruptorWaitStrategy: wrong default", DisruptorWaitStrategy.BLOCKING, endpoint.getDisruptor().getWaitStrategy());
     }
 }

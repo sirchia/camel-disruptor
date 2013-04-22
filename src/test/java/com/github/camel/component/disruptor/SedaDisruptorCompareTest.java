@@ -16,22 +16,13 @@
 
 package com.github.camel.component.disruptor;
 
+import com.lmax.disruptor.collections.Histogram;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.camel.Endpoint;
-import org.apache.camel.Exchange;
-import org.apache.camel.ExchangePattern;
-import org.apache.camel.Processor;
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
+import java.util.concurrent.*;
+import org.apache.camel.*;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.seda.SedaEndpoint;
 import org.apache.camel.test.junit4.CamelTestSupport;
@@ -39,8 +30,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import com.lmax.disruptor.collections.Histogram;
 
 /**
  * This class does not perform any functional test, but instead makes a comparison between the performance of the

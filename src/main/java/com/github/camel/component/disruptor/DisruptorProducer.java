@@ -27,7 +27,7 @@ import org.apache.camel.support.SynchronizationAdapter;
 import org.apache.camel.util.ExchangeHelper;
 
 /**
- * TODO: documentation
+ * A Producer for the Disruptor component.
  */
 public class DisruptorProducer extends DefaultAsyncProducer {
 
@@ -83,7 +83,6 @@ public class DisruptorProducer extends DefaultAsyncProducer {
                         if (log.isTraceEnabled()) {
                             log.trace("{}. Timeout occurred so response will be ignored: {}", this, response.hasOut() ? response.getOut() : response.getIn());
                         }
-                        return;
                     } else {
                         if (log.isTraceEnabled()) {
                             log.trace("{} with response: {}", this, response.hasOut() ? response.getOut() : response.getIn());
@@ -125,15 +124,18 @@ public class DisruptorProducer extends DefaultAsyncProducer {
                     // ignore
                 }
                 if (!done) {
-                    exchange.setException(new ExchangeTimedOutException(exchange, timeout));
                     // Remove timed out Exchange from disruptor endpoint.
-                    // TODO Remove exchange from disruptor. Maybe do this by setting a Property on the exchange and the value
+
+                    // We can't actually remove a published exchange from an active Disruptor.
+                    // Instead we prevent processing of the exchange by setting a Property on the exchange and the value
                     // would be an AtomicBoolean. This is set by the Producer and the Consumer would look up that Property and
-                    // check the AtomicBOolean. If the AtomicBoolean says that we are good to proceed, it will process the
+                    // check the AtomicBoolean. If the AtomicBoolean says that we are good to proceed, it will process the
                     // exchange. If false, it will simply disregard the exchange.
                     // But since the Property map is a Concurrent one, maybe we don't need the AtomicBoolean. Check with Simon.
                     // Also check the TimeoutHandler of the new Disruptor 3.0.0, consider making the switch to the latest version.
                     exchange.setProperty(DisruptorEndpoint.DISRUPTOR_IGNORE_EXCHANGE, true);
+
+                    exchange.setException(new ExchangeTimedOutException(exchange, timeout));
 
                     // count down to indicate timeout
                     latch.countDown();
@@ -164,7 +166,7 @@ public class DisruptorProducer extends DefaultAsyncProducer {
     }
 
 
-    protected Exchange prepareCopy(Exchange exchange, boolean handover) {
+    private Exchange prepareCopy(Exchange exchange, boolean handover) {
         // use a new copy of the exchange to route async
         Exchange copy = ExchangeHelper.createCorrelatedCopy(exchange, handover);
         // set a new from endpoint to be the disruptor

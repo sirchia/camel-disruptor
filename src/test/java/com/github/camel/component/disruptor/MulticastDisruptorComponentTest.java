@@ -27,7 +27,7 @@ import org.apache.camel.test.junit4.CamelTestSupport;
 import org.junit.Test;
 
 /**
- * TODO: documentation
+ * Tests that multicast functionality works correctly
  */
 public class MulticastDisruptorComponentTest extends CamelTestSupport {
     private static final String MULTIPLE_CONSUMERS_ENDPOINT_URI = "disruptor:test?multipleConsumers=true";

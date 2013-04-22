@@ -20,7 +20,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
- * TODO: documentation
+ * This abstract base class is used to implement the {@link LifecycleAwareExchangeEventHandler} interface with added
+ * support to await starting/stopping by the Disruptor framework.
  */
 abstract class AbstractLifecycleAwareExchangeEventHandler implements LifecycleAwareExchangeEventHandler {
 

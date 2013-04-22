@@ -28,14 +28,14 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * TODO: documentation
+ * Tests some of the basic disruptor functionality
  */
 public class BasicDisruptorComponentTest extends CamelTestSupport {
     @EndpointInject(uri = "mock:result")
-    protected MockEndpoint resultEndpoint;
+    private MockEndpoint resultEndpoint;
 
     @Produce(uri = "disruptor:test")
-    protected ProducerTemplate template;
+    private ProducerTemplate template;
 
     private static final Integer VALUE = Integer.valueOf(42);
 

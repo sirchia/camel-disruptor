@@ -15,7 +15,6 @@
  */
 package com.github.camel.component.disruptor;
 
-import com.github.camel.component.disruptor.DisruptorComponent;
 import java.util.Iterator;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.test.junit4.CamelTestSupport;
@@ -30,7 +29,7 @@ public class DisruptorComponentReferenceEndpointTest extends CamelTestSupport {
         DisruptorComponent disruptor = context.getComponent("disruptor", DisruptorComponent.class);
 
         String fooKey = disruptor.getDisruptorKey("disruptor://foo");
-        assertEquals(1, disruptor.getDisruptors().get(fooKey).getCount());
+        assertEquals(1, disruptor.getDisruptors().get(fooKey).getEndpointCount());
         assertEquals(2, numberOfReferences(disruptor));
 
         // add a second consumer on the endpoint
@@ -41,14 +40,14 @@ public class DisruptorComponentReferenceEndpointTest extends CamelTestSupport {
             }
         });
 
-        assertEquals(2, disruptor.getDisruptors().get(fooKey).getCount());
+        assertEquals(2, disruptor.getDisruptors().get(fooKey).getEndpointCount());
         assertEquals(3, numberOfReferences(disruptor));
 
         // remove the 1st route
         context.stopRoute("foo");
         context.removeRoute("foo");
 
-        assertEquals(1, disruptor.getDisruptors().get(fooKey).getCount());
+        assertEquals(1, disruptor.getDisruptors().get(fooKey).getEndpointCount());
         assertEquals(2, numberOfReferences(disruptor));
 
         // remove the 2nd route
@@ -61,7 +60,7 @@ public class DisruptorComponentReferenceEndpointTest extends CamelTestSupport {
         // there should still be a bar
         assertEquals(1, numberOfReferences(disruptor));
         String barKey = disruptor.getDisruptorKey("disruptor://bar");
-        assertEquals(1, disruptor.getDisruptors().get(barKey).getCount());
+        assertEquals(1, disruptor.getDisruptors().get(barKey).getEndpointCount());
     }
 
     @Override
@@ -78,9 +77,9 @@ public class DisruptorComponentReferenceEndpointTest extends CamelTestSupport {
 
     private int numberOfReferences(DisruptorComponent disruptor) {
         int num = 0;
-        Iterator<DisruptorComponent.DisruptorReference> it = disruptor.getDisruptors().values().iterator();
+        Iterator<DisruptorReference> it = disruptor.getDisruptors().values().iterator();
         while (it.hasNext()) {
-            num += it.next().getCount();
+            num += it.next().getEndpointCount();
         }
         return num;
     }

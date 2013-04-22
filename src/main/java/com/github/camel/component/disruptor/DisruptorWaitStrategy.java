@@ -19,7 +19,8 @@ package com.github.camel.component.disruptor;
 import com.lmax.disruptor.*;
 
 /**
- * TODO: documentation
+ * This enumeration holds all values that may be used as the {@link WaitStrategy} used by producers on a Disruptor.
+ * BLOCKING is the default {@link WaitStrategy}.
  */
 public enum DisruptorWaitStrategy {
     /**

@@ -25,8 +25,6 @@ import org.apache.camel.impl.DefaultEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.github.camel.component.disruptor.DisruptorComponent.DisruptorReference;
-
 /**
  * TODO: documentation
  */
@@ -203,11 +201,11 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
      *
      * @param exchange
      */
-    public void publish(Exchange exchange) {
+    void publish(Exchange exchange) {
         disruptorReference.publish(exchange);
     }
 
-    public DisruptorReference getDisruptor()
+    DisruptorReference getDisruptor()
     {
         return disruptorReference;
     }
