@@ -134,7 +134,7 @@ public class SedaDisruptorCompareTest extends CamelTestSupport {
         // 'seda:speedtest'. This shows that disruptor has a slight disadvantage as its name is longer than 'seda' :)
         // TODO: Figure out why the LONG test takes so long. Check for endpoint parsing every time we access endpoint
         parameters.add(new Object[] { "SEDA LONG {1P, 1C, 1CCT}", "seda:speedtest?concurrentConsumers=1&waitForTaskToComplete=IfReplyExpected&timeout=30000&multipleConsumers=false&limitConcurrentConsumers=true&blockWhenFull=false", singleProducer(), singleConsumer(),
-                singleConcurrentConsumerThread() });
+                singleConcurrentConsumerThread(), SEDA_SIZE_HISTOGRAM_BOUNDS });
         addParameterPair(parameters, singleProducer(), singleConsumer(), singleConcurrentConsumerThread());
         addParameterPair(parameters, singleProducer(), singleConsumer(), multipleConcurrentConsumerThreads());
         addParameterPair(parameters, singleProducer(), multipleConsumers(), singleConcurrentConsumerThread());
@@ -185,7 +185,6 @@ public class SedaDisruptorCompareTest extends CamelTestSupport {
         String sedaOptions = sizeOptionSeda.isEmpty() ? options : options + sizeOptionSeda;
         // Using { ... } because there is a bug in JUnit 4.11 and Eclipse: https://bugs.eclipse.org/bugs/show_bug.cgi?id=102512
         String testDescription = " { " + producers + "P, " + consumers + "C, " + parallelConsumerThreads + "CCT }";
-        System.out.println("OPTIONS: " + options);
         parameters.add(new Object[] { "SEDA" + testDescription, "seda:speedtest" + sedaOptions, producers, consumers, parallelConsumerThreads, SEDA_SIZE_HISTOGRAM_BOUNDS });
         parameters.add(new Object[] { "Disruptor" + testDescription, "disruptor:speedtest" + options, producers, consumers, parallelConsumerThreads, DISRUPTOR_SIZE_HISTOGRAM_BOUNDS });
     }
