@@ -52,9 +52,9 @@ public class DisruptorComponent extends DefaultComponent {
     private final Map<String, DisruptorReference> disruptors = new HashMap<String, DisruptorReference>();
 
     @Override
-    protected Endpoint createEndpoint(String uri, String remaining, Map<String, Object> parameters) throws Exception {
-        int concurrentConsumers = getAndRemoveParameter(parameters, "concurrentConsumers", Integer.class, defaultConcurrentConsumers);
-        boolean limitConcurrentConsumers = getAndRemoveParameter(parameters, "limitConcurrentConsumers", Boolean.class, true);
+    protected Endpoint createEndpoint(final String uri, final String remaining, final Map<String, Object> parameters) throws Exception {
+        final int concurrentConsumers = getAndRemoveParameter(parameters, "concurrentConsumers", Integer.class, defaultConcurrentConsumers);
+        final boolean limitConcurrentConsumers = getAndRemoveParameter(parameters, "limitConcurrentConsumers", Boolean.class, true);
         if (limitConcurrentConsumers && concurrentConsumers > MAX_CONCURRENT_CONSUMERS) {
             throw new IllegalArgumentException("The limitConcurrentConsumers flag in set to true. ConcurrentConsumers cannot be set at a value greater than "
                     + MAX_CONCURRENT_CONSUMERS + " was " + concurrentConsumers);
@@ -76,24 +76,24 @@ public class DisruptorComponent extends DefaultComponent {
         //TODO actually use pollTimeout parameter?
         parameters.remove("pollTimeout");
 
-        DisruptorWaitStrategy waitStrategy = getAndRemoveParameter(parameters, "waitStrategy", DisruptorWaitStrategy.class, defaultWaitStrategy);
+        final DisruptorWaitStrategy waitStrategy = getAndRemoveParameter(parameters, "waitStrategy", DisruptorWaitStrategy.class, defaultWaitStrategy);
 
-        ProducerType producerType = getAndRemoveParameter(parameters, "producerType", ProducerType.class, defaultProducerType);
+        final ProducerType producerType = getAndRemoveParameter(parameters, "producerType", ProducerType.class, defaultProducerType);
 
-        boolean multipleConsumers = getAndRemoveParameter(parameters, "multipleConsumers", boolean.class, defaultMultipleConsumers);
+        final boolean multipleConsumers = getAndRemoveParameter(parameters, "multipleConsumers", boolean.class, defaultMultipleConsumers);
 
-        DisruptorReference disruptorReference = getOrCreateDisruptor(uri, size, defaultProducerType, waitStrategy);
-        DisruptorEndpoint disruptorEndpoint = new DisruptorEndpoint(uri, this, disruptorReference, concurrentConsumers, multipleConsumers);
+        final DisruptorReference disruptorReference = getOrCreateDisruptor(uri, size, producerType, waitStrategy);
+        final DisruptorEndpoint disruptorEndpoint = new DisruptorEndpoint(uri, this, disruptorReference, concurrentConsumers, multipleConsumers);
         disruptorEndpoint.configureProperties(parameters);
 
         return disruptorEndpoint;
     }
 
-    private DisruptorReference getOrCreateDisruptor(String uri, int size, ProducerType producerType, DisruptorWaitStrategy waitStrategy)
+    private DisruptorReference getOrCreateDisruptor(final String uri, final int size, final ProducerType producerType, final DisruptorWaitStrategy waitStrategy)
             throws Exception {
-        String key = getDisruptorKey(uri);
+        final String key = getDisruptorKey(uri);
 
-        int sizeToUse;
+        final int sizeToUse;
         if (size > 0) {
             sizeToUse = size;
         } else if (bufferSize > 0) {
@@ -149,7 +149,7 @@ public class DisruptorComponent extends DefaultComponent {
         return defaultConcurrentConsumers;
     }
 
-    public void setDefaultConcurrentConsumers(int defaultConcurrentConsumers) {
+    public void setDefaultConcurrentConsumers(final int defaultConcurrentConsumers) {
         this.defaultConcurrentConsumers = defaultConcurrentConsumers;
     }
 
@@ -157,7 +157,7 @@ public class DisruptorComponent extends DefaultComponent {
         return defaultMultipleConsumers;
     }
 
-    public void setDefaultMultipleConsumers(boolean defaultMultipleConsumers) {
+    public void setDefaultMultipleConsumers(final boolean defaultMultipleConsumers) {
         this.defaultMultipleConsumers = defaultMultipleConsumers;
     }
 
@@ -165,7 +165,7 @@ public class DisruptorComponent extends DefaultComponent {
         return defaultProducerType;
     }
 
-    public void setDefaultProducerType(ProducerType defaultProducerType) {
+    public void setDefaultProducerType(final ProducerType defaultProducerType) {
         this.defaultProducerType = defaultProducerType;
     }
 
@@ -173,12 +173,12 @@ public class DisruptorComponent extends DefaultComponent {
         return defaultWaitStrategy;
     }
 
-    public void setDefaultWaitStrategy(DisruptorWaitStrategy defaultWaitStrategy) {
+    public void setDefaultWaitStrategy(final DisruptorWaitStrategy defaultWaitStrategy) {
         this.defaultWaitStrategy = defaultWaitStrategy;
     }
 
     @Deprecated
-    public void setQueueSize(int size) {
+    public void setQueueSize(final int size) {
         LOGGER.warn("Using deprecated queueSize parameter for SEDA compatibility, use bufferSize instead");
         queueSize = size;
     }
@@ -189,7 +189,7 @@ public class DisruptorComponent extends DefaultComponent {
         return queueSize;
     }
 
-    public void setBufferSize(int size) {
+    public void setBufferSize(final int size) {
         bufferSize = size;
     }
 

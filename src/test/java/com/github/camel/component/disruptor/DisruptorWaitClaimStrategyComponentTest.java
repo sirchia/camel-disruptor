@@ -46,11 +46,11 @@ public class DisruptorWaitClaimStrategyComponentTest extends CamelTestSupport {
 
     private static final Integer VALUE = Integer.valueOf(42);
 
-    private String producerType;
-    private String waitStrategy;
+    private final String producerType;
+    private final String waitStrategy;
     private String disruptorUri;
 
-    public DisruptorWaitClaimStrategyComponentTest(String waitStrategy, String producerType) {
+    public DisruptorWaitClaimStrategyComponentTest(final String waitStrategy, final String producerType) {
 
         this.waitStrategy = waitStrategy;
         this.producerType = producerType;
@@ -58,10 +58,10 @@ public class DisruptorWaitClaimStrategyComponentTest extends CamelTestSupport {
 
     @Parameters
     public static Collection<String[]> strategies() {
-        List<String[]> strategies = new ArrayList<String[]>();
+        final List<String[]> strategies = new ArrayList<String[]>();
 
-        for (DisruptorWaitStrategy waitStrategy : DisruptorWaitStrategy.values()) {
-            for (ProducerType producerType : ProducerType.values()) {
+        for (final DisruptorWaitStrategy waitStrategy : DisruptorWaitStrategy.values()) {
+            for (final ProducerType producerType : ProducerType.values()) {
                 strategies.add(new String[] {waitStrategy.name(), producerType.name()});
             }
         }

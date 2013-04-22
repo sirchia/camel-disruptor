@@ -36,9 +36,9 @@ public class DisruptorUnitOfWorkTest extends CamelTestSupport {
 
     @Test
     public void testDisruptorUOW() throws Exception {
-        NotifyBuilder notify = new NotifyBuilder(context).whenDone(2).create();
+        final NotifyBuilder notify = new NotifyBuilder(context).whenDone(2).create();
 
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedMessageCount(1);
 
         template.sendBody("direct:start", "Hello World");
@@ -61,12 +61,12 @@ public class DisruptorUnitOfWorkTest extends CamelTestSupport {
 
                 from("disruptor:foo").process(new Processor() {
                     @Override
-                    public void process(Exchange exchange) throws Exception {
+                    public void process(final Exchange exchange) throws Exception {
                         assertEquals(null, sync);
                     }
                 }).process(new Processor() {
                     @Override
-                    public void process(Exchange exchange) throws Exception {
+                    public void process(final Exchange exchange) throws Exception {
                         lastOne = "processor";
                     }
                 }).to("mock:result");
@@ -78,21 +78,21 @@ public class DisruptorUnitOfWorkTest extends CamelTestSupport {
 
         private final String id;
 
-        private MyUOWProcessor(String id) {
+        private MyUOWProcessor(final String id) {
             this.id = id;
         }
 
         @Override
-        public void process(Exchange exchange) throws Exception {
+        public void process(final Exchange exchange) throws Exception {
             exchange.getUnitOfWork().addSynchronization(new Synchronization() {
                 @Override
-                public void onComplete(Exchange exchange) {
+                public void onComplete(final Exchange exchange) {
                     sync = "onComplete" + id;
                     lastOne = sync;
                 }
 
                 @Override
-                public void onFailure(Exchange exchange) {
+                public void onFailure(final Exchange exchange) {
                     sync = "onFailure" + id;
                     lastOne = sync;
                 }

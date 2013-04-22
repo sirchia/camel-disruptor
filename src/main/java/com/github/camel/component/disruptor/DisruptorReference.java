@@ -55,7 +55,7 @@ class DisruptorReference {
 
     private final Queue<Exchange> temporaryExchangeBuffer;
 
-    DisruptorReference(DisruptorComponent component, String uri, int size, ProducerType producerType, DisruptorWaitStrategy waitStrategy)
+    DisruptorReference(final DisruptorComponent component, final String uri, final int size, final ProducerType producerType, final DisruptorWaitStrategy waitStrategy)
             throws Exception {
         this.component = component;
         this.uri = uri;
@@ -79,10 +79,10 @@ class DisruptorReference {
         return disruptor == null;
     }
 
-    public void publish(Exchange exchange) {
-        RingBuffer<ExchangeEvent> ringBuffer = disruptor.getRingBuffer();
+    public void publish(final Exchange exchange) {
+        final RingBuffer<ExchangeEvent> ringBuffer = disruptor.getRingBuffer();
 
-        long sequence = ringBuffer.next();
+        final long sequence = ringBuffer.next();
         ringBuffer.get(sequence).setExchange(exchange);
         ringBuffer.publish(sequence);
     }
@@ -97,10 +97,10 @@ class DisruptorReference {
 
         createDisruptor();
 
-        ArrayList<LifecycleAwareExchangeEventHandler> eventHandlers = new ArrayList<LifecycleAwareExchangeEventHandler>();
+        final ArrayList<LifecycleAwareExchangeEventHandler> eventHandlers = new ArrayList<LifecycleAwareExchangeEventHandler>();
 
-        for (DisruptorEndpoint endpoint : endpoints) {
-            Collection<LifecycleAwareExchangeEventHandler> consumerEventHandlers = endpoint.createConsumerEventHandlers();
+        for (final DisruptorEndpoint endpoint : endpoints) {
+            final Collection<LifecycleAwareExchangeEventHandler> consumerEventHandlers = endpoint.createConsumerEventHandlers();
 
             if (consumerEventHandlers != null) {
                 eventHandlers.addAll(consumerEventHandlers);
@@ -121,7 +121,7 @@ class DisruptorReference {
         }
 
         //make sure all event handlers are correctly started before we continue
-        for (LifecycleAwareExchangeEventHandler handler : handlers) {
+        for (final LifecycleAwareExchangeEventHandler handler : handlers) {
             boolean eventHandlerStarted = false;
             while (!eventHandlerStarted) {
                 try {
@@ -142,12 +142,12 @@ class DisruptorReference {
         }
 
         //now empty out all buffered Exchange if we had any
-        List<Exchange> exchanges = new ArrayList<Exchange>(temporaryExchangeBuffer.size());
+        final List<Exchange> exchanges = new ArrayList<Exchange>(temporaryExchangeBuffer.size());
         while (!temporaryExchangeBuffer.isEmpty()) {
             exchanges.add(temporaryExchangeBuffer.remove());
         }
         //and offer them again to our new ringbuffer
-        for (Exchange exchange : exchanges) {
+        for (final Exchange exchange : exchanges) {
             publish(exchange);
         }
     }
@@ -157,7 +157,7 @@ class DisruptorReference {
             //check if we had a blocking event handler to keep an empty disruptor 'busy'
             if (handlers != null && handlers.length == 1 && handlers[0] instanceof BlockingExchangeEventHandler) {
                 //yes we did, unblock it so we can get rid of our backlog empty its pending exchanged in our temporary buffer
-                BlockingExchangeEventHandler blockingExchangeEventHandler = (BlockingExchangeEventHandler) handlers[0];
+                final BlockingExchangeEventHandler blockingExchangeEventHandler = (BlockingExchangeEventHandler) handlers[0];
                 blockingExchangeEventHandler.unblock();
             }
 
@@ -165,7 +165,7 @@ class DisruptorReference {
 
             //they have already been given a trigger to halt when they are done by shutting down the disruptor
             //we do however want to await their completion before they are scheduled to process events from the new
-            for (LifecycleAwareExchangeEventHandler eventHandler : handlers) {
+            for (final LifecycleAwareExchangeEventHandler eventHandler : handlers) {
                 boolean eventHandlerFinished = false;
                 //the disruptor is now empty and all consumers are either done or busy processing their last exchange
                 while (!eventHandlerFinished) {
@@ -197,7 +197,7 @@ class DisruptorReference {
         }
     }
 
-    private void handleEventsWith(LifecycleAwareExchangeEventHandler[] newHandlers) {
+    private void handleEventsWith(final LifecycleAwareExchangeEventHandler[] newHandlers) {
         if (newHandlers == null || newHandlers.length == 0) {
             handlers = new LifecycleAwareExchangeEventHandler[1];
             handlers[0] = new BlockingExchangeEventHandler();
@@ -216,15 +216,19 @@ class DisruptorReference {
         return waitStrategy;
     }
 
+    ProducerType getProducerType() {
+        return producerType;
+    }
+
     public int getBufferSize() {
         return disruptor.getRingBuffer().getBufferSize();
     }
 
-    public void addEndpoint(DisruptorEndpoint disruptorEndpoint) {
+    public void addEndpoint(final DisruptorEndpoint disruptorEndpoint) {
         endpoints.add(disruptorEndpoint);
     }
 
-    public void removeEndpoint(DisruptorEndpoint disruptorEndpoint) {
+    public void removeEndpoint(final DisruptorEndpoint disruptorEndpoint) {
         if (getEndpointCount() == 1) {
             this.shutdown();
         }
@@ -238,7 +242,7 @@ class DisruptorReference {
         return temporaryExchangeBuffer.size();
     }
 
-    private void resizeThreadPoolExecutor(int newSize) {
+    private void resizeThreadPoolExecutor(final int newSize) {
         if (executor == null && newSize > 0) {
             //no thread pool executor yet, create a new one
             executor = component.getCamelContext().getExecutorServiceManager().newFixedThreadPool(this, uri,
@@ -249,7 +253,7 @@ class DisruptorReference {
             executor = null;
         } else if (executor instanceof ThreadPoolExecutor) {
             //our thread pool executor is of type ThreadPoolExecutor, we know how to resize it
-            ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) executor;
+            final ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) executor;
             threadPoolExecutor.setCorePoolSize(newSize);
             threadPoolExecutor.setMaximumPoolSize(newSize);
         } else if (newSize > 0) {
@@ -267,11 +271,11 @@ class DisruptorReference {
      */
     private class BlockingExchangeEventHandler extends AbstractLifecycleAwareExchangeEventHandler {
 
-        private CountDownLatch blockingLatch = new CountDownLatch(1);
+        private final CountDownLatch blockingLatch = new CountDownLatch(1);
         @Override
-        public void onEvent(ExchangeEvent event, long sequence, boolean endOfBatch) throws Exception {
+        public void onEvent(final ExchangeEvent event, final long sequence, final boolean endOfBatch) throws Exception {
             blockingLatch.await();
-            Exchange exchange = event.getExchange();
+            final Exchange exchange = event.getExchange();
 
             if (exchange.getProperty(DisruptorEndpoint.DISRUPTOR_IGNORE_EXCHANGE, false, boolean.class)) {
                 // Property was set and it was set to true, so don't process Exchange.
@@ -299,14 +303,14 @@ class DisruptorReference {
      */
     private static class DelayedExecutor implements Executor {
 
-        private static Queue<Runnable> delayedCommands = new LinkedList<Runnable>();
+        private final Queue<Runnable> delayedCommands = new LinkedList<Runnable>();
 
         @Override
-        public void execute(Runnable command) {
+        public void execute(final Runnable command) {
             delayedCommands.offer(command);
         }
 
-        public void executeDelayedCommands(Executor actualExecutor) {
+        public void executeDelayedCommands(final Executor actualExecutor) {
             Runnable command;
 
             while ((command = delayedCommands.poll()) != null) {

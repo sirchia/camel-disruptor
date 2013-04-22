@@ -31,7 +31,7 @@ public class DisruptorShouldNotUseSameThreadTest extends CamelTestSupport {
 
     @Test
     public void testNotUseSameThread() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedBodiesReceived("Hello World");
 
         template.sendBody("direct:start", "Hello World");
@@ -48,7 +48,7 @@ public class DisruptorShouldNotUseSameThreadTest extends CamelTestSupport {
 
                 from("direct:start").process(new Processor() {
                     @Override
-                    public void process(Exchange exchange) throws Exception {
+                    public void process(final Exchange exchange) throws Exception {
                         local.set("Hello");
                         id = Thread.currentThread().getId();
                     }
@@ -56,7 +56,7 @@ public class DisruptorShouldNotUseSameThreadTest extends CamelTestSupport {
 
                 from("disruptor:foo").process(new Processor() {
                     @Override
-                    public void process(Exchange exchange) throws Exception {
+                    public void process(final Exchange exchange) throws Exception {
                         assertEquals(null, local.get());
                         assertNotSame("Thread ids should not be same", id, Thread.currentThread().getId());
                     }

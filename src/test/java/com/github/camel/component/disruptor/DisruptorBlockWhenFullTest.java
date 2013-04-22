@@ -45,7 +45,7 @@ public class DisruptorBlockWhenFullTest extends CamelTestSupport {
     public void testDisruptorBlockingWhenFull() throws Exception {
         getMockEndpoint(MOCK_URI).setExpectedMessageCount(QUEUE_SIZE + 20);
 
-        DisruptorEndpoint disruptor = context.getEndpoint(DEFAULT_URI, DisruptorEndpoint.class);
+        final DisruptorEndpoint disruptor = context.getEndpoint(DEFAULT_URI, DisruptorEndpoint.class);
         assertEquals(QUEUE_SIZE, disruptor.remainingCapacity());
 
         sendSoManyOverCapacity(DEFAULT_URI, QUEUE_SIZE, 20);
@@ -56,7 +56,7 @@ public class DisruptorBlockWhenFullTest extends CamelTestSupport {
      * This method make sure that we hit the limit by sending 'soMany' messages over the given capacity which allows the
      * delayer to kick in.
      */
-    private void sendSoManyOverCapacity(String uri, int capacity, int soMany) {
+    private void sendSoManyOverCapacity(final String uri, final int capacity, final int soMany) {
         for (int i = 0; i < (capacity + soMany); i++) {
             template.sendBody(uri, "Message " + i);
         }

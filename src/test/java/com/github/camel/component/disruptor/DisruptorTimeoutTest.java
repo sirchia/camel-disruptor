@@ -33,9 +33,9 @@ public class DisruptorTimeoutTest extends CamelTestSupport {
 
     @Test
     public void testDisruptorNoTimeout() throws Exception {
-        MockEndpoint result = getMockEndpoint("mock:result");
+        final MockEndpoint result = getMockEndpoint("mock:result");
         result.setExpectedMessageCount(1);
-        Future<String> out = template.asyncRequestBody("disruptor:foo", "World", String.class);
+        final Future<String> out = template.asyncRequestBody("disruptor:foo", "World", String.class);
         assertEquals("Bye World", out.get());
         result.await(1, TimeUnit.SECONDS);
         assertMockEndpointsSatisfied();
@@ -43,10 +43,10 @@ public class DisruptorTimeoutTest extends CamelTestSupport {
 
     @Test
     public void testDisruptorTimeout() throws Exception {
-        MockEndpoint result = getMockEndpoint("mock:result");
+        final MockEndpoint result = getMockEndpoint("mock:result");
         result.setExpectedMessageCount(0);
 
-        Future<String> out = template.asyncRequestBody("disruptor:foo?timeout=" + timeout, "World", String.class);
+        final Future<String> out = template.asyncRequestBody("disruptor:foo?timeout=" + timeout, "World", String.class);
         try {
             out.get();
             fail("Should have thrown an exception");
@@ -54,7 +54,7 @@ public class DisruptorTimeoutTest extends CamelTestSupport {
             assertIsInstanceOf(CamelExecutionException.class, e.getCause());
             assertIsInstanceOf(ExchangeTimedOutException.class, e.getCause().getCause());
 
-            DisruptorEndpoint de = (DisruptorEndpoint) context.getRoute("disruptor").getEndpoint();
+            final DisruptorEndpoint de = (DisruptorEndpoint) context.getRoute("disruptor").getEndpoint();
             assertNotNull("Consumer endpoint cannot be null", de);
             //we can't remove the exchange from a Disruptor once it is published, but it should never reach the
             //mock:result endpoint because it should be filtered out by the DisruptorConsumer

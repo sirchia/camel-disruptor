@@ -27,7 +27,7 @@ import org.junit.Test;
 public class DisruptorConsumerSuspendResumeTest extends CamelTestSupport {
     @Test
     public void testSuspendResume() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:bar");
+        final MockEndpoint mock = getMockEndpoint("mock:bar");
         mock.expectedMessageCount(1);
 
         template.sendBody("disruptor:foo", "A");
@@ -38,7 +38,7 @@ public class DisruptorConsumerSuspendResumeTest extends CamelTestSupport {
         assertEquals("Started", context.getRouteStatus("bar").name());
 
         // suspend bar consumer (not the route)
-        DisruptorConsumer consumer = (DisruptorConsumer) context.getRoute("bar").getConsumer();
+        final DisruptorConsumer consumer = (DisruptorConsumer) context.getRoute("bar").getConsumer();
 
         ServiceHelper.suspendService(consumer);
         assertEquals("Suspended", consumer.getStatus().name());

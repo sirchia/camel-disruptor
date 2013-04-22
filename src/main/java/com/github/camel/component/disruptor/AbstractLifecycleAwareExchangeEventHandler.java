@@ -40,7 +40,7 @@ abstract class AbstractLifecycleAwareExchangeEventHandler implements LifecycleAw
     }
 
     @Override
-    public boolean awaitStarted(long timeout, TimeUnit unit) throws InterruptedException {
+    public boolean awaitStarted(final long timeout, final TimeUnit unit) throws InterruptedException {
         return started || startedLatch.await(timeout, unit);
     }
 
@@ -52,7 +52,7 @@ abstract class AbstractLifecycleAwareExchangeEventHandler implements LifecycleAw
     }
 
     @Override
-    public boolean awaitStopped(long timeout, TimeUnit unit) throws InterruptedException {
+    public boolean awaitStopped(final long timeout, final TimeUnit unit) throws InterruptedException {
         return !started || stoppedLatch.await(timeout, unit);
     }
 

@@ -29,7 +29,7 @@ public class ExchangeEvent {
         return exchange;
     }
 
-    public void setExchange(Exchange exchange) {
+    public void setExchange(final Exchange exchange) {
         this.exchange = exchange;
     }
 

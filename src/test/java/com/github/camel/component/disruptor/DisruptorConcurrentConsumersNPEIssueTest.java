@@ -27,7 +27,7 @@ import org.junit.Test;
 public class DisruptorConcurrentConsumersNPEIssueTest extends CamelTestSupport {
     @Test
     public void testSendToDisruptor() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedBodiesReceived("Hello World");
 
         template.sendBody("disruptor:foo", "Hello World");
@@ -45,7 +45,7 @@ public class DisruptorConcurrentConsumersNPEIssueTest extends CamelTestSupport {
 
     @Test
     public void testStartThird() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedBodiesReceived("Hello World");
 
         template.sendBody("disruptor:foo", "Hello World");

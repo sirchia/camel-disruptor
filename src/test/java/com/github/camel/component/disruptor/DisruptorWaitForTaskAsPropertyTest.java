@@ -31,9 +31,9 @@ public class DisruptorWaitForTaskAsPropertyTest extends CamelTestSupport {
     public void testInOut() throws Exception {
         getMockEndpoint("mock:result").expectedBodiesReceived("Bye World");
 
-        Exchange out = template.send("direct:start", new Processor() {
+        final Exchange out = template.send("direct:start", new Processor() {
             @Override
-            public void process(Exchange exchange) throws Exception {
+            public void process(final Exchange exchange) throws Exception {
                 exchange.getIn().setBody("Hello World");
                 exchange.setPattern(ExchangePattern.InOut);
                 exchange.setProperty(Exchange.ASYNC_WAIT, WaitForTaskToComplete.IfReplyExpected);
@@ -48,9 +48,9 @@ public class DisruptorWaitForTaskAsPropertyTest extends CamelTestSupport {
     public void testInOnly() throws Exception {
         getMockEndpoint("mock:result").expectedBodiesReceived("Bye World");
 
-        Exchange out = template.send("direct:start", new Processor() {
+        final Exchange out = template.send("direct:start", new Processor() {
             @Override
-            public void process(Exchange exchange) throws Exception {
+            public void process(final Exchange exchange) throws Exception {
                 exchange.getIn().setBody("Hello World");
                 exchange.setPattern(ExchangePattern.InOnly);
                 exchange.setProperty(Exchange.ASYNC_WAIT, WaitForTaskToComplete.IfReplyExpected);

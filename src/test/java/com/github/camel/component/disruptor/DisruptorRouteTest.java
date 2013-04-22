@@ -31,7 +31,7 @@ public class DisruptorRouteTest extends TestSupport {
     public void testDisruptorQueue() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        CamelContext context = new DefaultCamelContext();
+        final CamelContext context = new DefaultCamelContext();
 
         // lets add some routes
         context.addRoutes(new RouteBuilder() {
@@ -40,7 +40,7 @@ public class DisruptorRouteTest extends TestSupport {
                 from("disruptor:test.a").to("disruptor:test.b");
                 from("disruptor:test.b").process(new Processor() {
                     @Override
-                    public void process(Exchange e) {
+                    public void process(final Exchange e) {
                         log.debug("Received exchange: " + e.getIn());
                         latch.countDown();
                     }
@@ -51,11 +51,11 @@ public class DisruptorRouteTest extends TestSupport {
         context.start();
 
         // now lets fire in a message
-        Endpoint endpoint = context.getEndpoint("disruptor:test.a");
-        Exchange exchange = endpoint.createExchange();
+        final Endpoint endpoint = context.getEndpoint("disruptor:test.a");
+        final Exchange exchange = endpoint.createExchange();
         exchange.getIn().setHeader("cheese", 123);
 
-        Producer producer = endpoint.createProducer();
+        final Producer producer = endpoint.createProducer();
         producer.process(exchange);
 
         // now lets sleep for a while
@@ -68,7 +68,7 @@ public class DisruptorRouteTest extends TestSupport {
     public void testThatShowsEndpointResolutionIsNotConsistent() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        CamelContext context = new DefaultCamelContext();
+        final CamelContext context = new DefaultCamelContext();
 
         // lets add some routes
         context.addRoutes(new RouteBuilder() {
@@ -77,7 +77,7 @@ public class DisruptorRouteTest extends TestSupport {
                 from("disruptor:test.a").to("disruptor:test.b");
                 from("disruptor:test.b").process(new Processor() {
                     @Override
-                    public void process(Exchange e) {
+                    public void process(final Exchange e) {
                         log.debug("Received exchange: " + e.getIn());
                         latch.countDown();
                     }
@@ -88,11 +88,11 @@ public class DisruptorRouteTest extends TestSupport {
         context.start();
 
         // now lets fire in a message
-        Endpoint endpoint = context.getEndpoint("disruptor:test.a");
-        Exchange exchange = endpoint.createExchange();
+        final Endpoint endpoint = context.getEndpoint("disruptor:test.a");
+        final Exchange exchange = endpoint.createExchange();
         exchange.getIn().setHeader("cheese", 123);
 
-        Producer producer = endpoint.createProducer();
+        final Producer producer = endpoint.createProducer();
         producer.process(exchange);
 
         // now lets sleep for a while

@@ -29,15 +29,15 @@ public class DisruptorInOutChainedTimeoutTest extends CamelTestSupport {
     @Test
     public void testDisruptorInOutChainedTimeout() throws Exception {
         // time timeout after 2 sec should trigger a immediately reply
-        StopWatch watch = new StopWatch();
+        final StopWatch watch = new StopWatch();
         try {
             template.requestBody("disruptor:a?timeout=5000", "Hello World");
             fail("Should have thrown an exception");
         } catch (CamelExecutionException e) {
-            ExchangeTimedOutException cause = assertIsInstanceOf(ExchangeTimedOutException.class, e.getCause());
+            final ExchangeTimedOutException cause = assertIsInstanceOf(ExchangeTimedOutException.class, e.getCause());
             assertEquals(2000, cause.getTimeout());
         }
-        long delta = watch.stop();
+        final long delta = watch.stop();
 
         assertTrue("Should be faster than 4000 millis, was: " + delta, delta < 4000);
     }

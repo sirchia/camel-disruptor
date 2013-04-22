@@ -33,7 +33,7 @@ public class DisruptorBufferingTest extends CamelTestSupport {
         template.sendBody("disruptor:foo", "B");
         template.sendBody("disruptor:foo", "C");
 
-        DisruptorEndpoint disruptorEndpoint = getMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
+        final DisruptorEndpoint disruptorEndpoint = getMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
 
         assertEquals(5, disruptorEndpoint.getDisruptor().remainingCapacity());
 
@@ -47,7 +47,7 @@ public class DisruptorBufferingTest extends CamelTestSupport {
 
         // Now that we have a consumer, the disruptor should send the buffered
         // events downstream. Expect to receive the 3 original exchanges.
-        MockEndpoint mockEndpoint = getMockEndpoint("mock:bar");
+        final MockEndpoint mockEndpoint = getMockEndpoint("mock:bar");
         mockEndpoint.expectedMessageCount(3);
         mockEndpoint.assertIsSatisfied(200);
     }
@@ -58,7 +58,7 @@ public class DisruptorBufferingTest extends CamelTestSupport {
         template.sendBody("disruptor:foo", "B");
         template.sendBody("disruptor:foo", "C");
 
-        DisruptorEndpoint disruptorEndpoint = getMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
+        final DisruptorEndpoint disruptorEndpoint = getMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
 
         assertEquals(5, disruptorEndpoint.getDisruptor().remainingCapacity());
 

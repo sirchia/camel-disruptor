@@ -33,7 +33,7 @@ public class DisruptorInOutChainedWithOnCompletionTest extends CamelTestSupport 
         // the onCustomCompletion should be send very last (as it will be handed over)
         getMockEndpoint("mock:c").expectedBodiesReceived("start-a-b", "onCustomCompletion");
 
-        String reply = template.requestBody("disruptor:a", "start", String.class);
+        final String reply = template.requestBody("disruptor:a", "start", String.class);
         assertEquals("start-a-b-c", reply);
 
         assertMockEndpointsSatisfied();
@@ -46,11 +46,11 @@ public class DisruptorInOutChainedWithOnCompletionTest extends CamelTestSupport 
             public void configure() throws Exception {
                 from("disruptor:a").process(new Processor() {
                     @Override
-                    public void process(Exchange exchange) throws Exception {
+                    public void process(final Exchange exchange) throws Exception {
                         // should come in last
                         exchange.addOnCompletion(new SynchronizationAdapter() {
                             @Override
-                            public void onDone(Exchange exchange) {
+                            public void onDone(final Exchange exchange) {
                                 template.sendBody("mock:c", "onCustomCompletion");
                             }
                         });

@@ -16,6 +16,7 @@
 
 package com.github.camel.component.disruptor;
 
+import com.lmax.disruptor.dsl.ProducerType;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 import org.apache.camel.*;
@@ -44,11 +45,11 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     private final DisruptorReference disruptorReference;
 
-    public DisruptorEndpoint(String endpointUri, Component component, DisruptorReference disruptorReference, int concurrentConsumers, boolean multipleConsumers) throws Exception {
+    public DisruptorEndpoint(final String endpointUri, final Component component, final DisruptorReference disruptorReference, final int concurrentConsumers, final boolean multipleConsumers) throws Exception {
         super(endpointUri, component);
-    this.disruptorReference = disruptorReference;
+        this.disruptorReference = disruptorReference;
         this.concurrentConsumers = concurrentConsumers;
-    this.multipleConsumers = multipleConsumers;
+        this.multipleConsumers = multipleConsumers;
     }
 
     @ManagedAttribute(description = "Buffer max capacity")
@@ -71,7 +72,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         return waitForTaskToComplete;
     }
 
-    public void setWaitForTaskToComplete(WaitForTaskToComplete waitForTaskToComplete) {
+    public void setWaitForTaskToComplete(final WaitForTaskToComplete waitForTaskToComplete) {
         this.waitForTaskToComplete = waitForTaskToComplete;
     }
 
@@ -80,7 +81,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         return timeout;
     }
 
-    public void setTimeout(long timeout) {
+    public void setTimeout(final long timeout) {
         this.timeout = timeout;
     }
 
@@ -116,11 +117,14 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     @Override
     public Producer createProducer() throws Exception {
+        if (getProducers().size() == 1 && getDisruptor().getProducerType() == ProducerType.SINGLE) {
+            throw new IllegalStateException("Endpoint can't support multiple producers when ProducerType SINGLE is configured");
+        }
         return new DisruptorProducer(this, getWaitForTaskToComplete(), getTimeout());
     }
 
     @Override
-    public Consumer createConsumer(Processor processor) throws Exception {
+    public Consumer createConsumer(final Processor processor) throws Exception {
         return new DisruptorConsumer(this, processor);
     }
 
@@ -145,7 +149,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         return (DisruptorComponent) super.getComponent();
     }
 
-    void onStarted(DisruptorConsumer consumer) throws Exception {
+    void onStarted(final DisruptorConsumer consumer) throws Exception {
         synchronized (this) {
             if (consumers.add(consumer)) {
                 LOGGER.debug("Starting consumer {} on endpoint {}", consumer, getEndpointUri());
@@ -161,7 +165,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     }
 
 
-    void onStopped(DisruptorConsumer consumer) throws Exception {
+    void onStopped(final DisruptorConsumer consumer) throws Exception {
         synchronized (this) {
 
             if (consumers.remove(consumer)) {
@@ -178,18 +182,18 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         }
     }
 
-    void onStarted(DisruptorProducer producer) {
+    void onStarted(final DisruptorProducer producer) {
         producers.add(producer);
     }
 
-    void onStopped(DisruptorProducer producer) {
+    void onStopped(final DisruptorProducer producer) {
         producers.remove(producer);
     }
 
     Collection<LifecycleAwareExchangeEventHandler> createConsumerEventHandlers() {
-        List<LifecycleAwareExchangeEventHandler> eventHandlers = new ArrayList<LifecycleAwareExchangeEventHandler>();
+        final List<LifecycleAwareExchangeEventHandler> eventHandlers = new ArrayList<LifecycleAwareExchangeEventHandler>();
 
-        for (DisruptorConsumer consumer : consumers) {
+        for (final DisruptorConsumer consumer : consumers) {
             eventHandlers.addAll(consumer.createEventHandlers(concurrentConsumers));
         }
 
@@ -201,12 +205,11 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
      *
      * @param exchange
      */
-    void publish(Exchange exchange) {
+    void publish(final Exchange exchange) {
         disruptorReference.publish(exchange);
     }
 
-    DisruptorReference getDisruptor()
-    {
+    DisruptorReference getDisruptor() {
         return disruptorReference;
     }
 }

@@ -36,7 +36,7 @@ public class DisruptorProducer extends DefaultAsyncProducer {
 
     private final DisruptorEndpoint endpoint;
 
-    public DisruptorProducer(DisruptorEndpoint endpoint, WaitForTaskToComplete waitForTaskToComplete, long timeout) {
+    public DisruptorProducer(final DisruptorEndpoint endpoint, final WaitForTaskToComplete waitForTaskToComplete, final long timeout) {
         super(endpoint);
         this.waitForTaskToComplete = waitForTaskToComplete;
         this.timeout = timeout;
@@ -69,7 +69,7 @@ public class DisruptorProducer extends DefaultAsyncProducer {
                 || (wait == WaitForTaskToComplete.IfReplyExpected && ExchangeHelper.isOutCapable(exchange))) {
 
             // do not handover the completion as we wait for the copy to complete, and copy its result back when it done
-            Exchange copy = prepareCopy(exchange, false);
+            final Exchange copy = prepareCopy(exchange, false);
 
             // latch that waits until we are complete
             final CountDownLatch latch = new CountDownLatch(1);
@@ -77,7 +77,7 @@ public class DisruptorProducer extends DefaultAsyncProducer {
             // we should wait for the reply so install a on completion so we know when its complete
             copy.addOnCompletion(new SynchronizationAdapter() {
                 @Override
-                public void onDone(Exchange response) {
+                public void onDone(final Exchange response) {
                     // check for timeout, which then already would have invoked the latch
                     if (latch.getCount() == 0) {
                         if (log.isTraceEnabled()) {
@@ -154,7 +154,7 @@ public class DisruptorProducer extends DefaultAsyncProducer {
         } else {
             // no wait, eg its a InOnly then just publish to the ringbuffer and return
             // handover the completion so its the copy which performs that, as we do not wait
-            Exchange copy = prepareCopy(exchange, true);
+            final Exchange copy = prepareCopy(exchange, true);
             log.trace("Publishing Exchange to disruptor ringbuffer: {}", copy);
             endpoint.publish(copy);
         }
@@ -166,9 +166,9 @@ public class DisruptorProducer extends DefaultAsyncProducer {
     }
 
 
-    private Exchange prepareCopy(Exchange exchange, boolean handover) {
+    private Exchange prepareCopy(final Exchange exchange, final boolean handover) {
         // use a new copy of the exchange to route async
-        Exchange copy = ExchangeHelper.createCorrelatedCopy(exchange, handover);
+        final Exchange copy = ExchangeHelper.createCorrelatedCopy(exchange, handover);
         // set a new from endpoint to be the disruptor
         copy.setFromEndpoint(endpoint);
         return copy;

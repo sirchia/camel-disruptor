@@ -27,7 +27,7 @@ public class DisruptorComplexInOutTest extends CamelTestSupport {
     public void testInOut() throws Exception {
         getMockEndpoint("mock:result").expectedBodiesReceived("Bye World");
 
-        String out = template.requestBody("direct:start", "Hello World", String.class);
+        final String out = template.requestBody("direct:start", "Hello World", String.class);
         assertEquals("Bye World", out);
 
         assertMockEndpointsSatisfied();

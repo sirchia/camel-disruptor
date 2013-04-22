@@ -26,7 +26,7 @@ import org.junit.Test;
 public class DisruptorRemoveRouteThenAddAgainTest extends CamelTestSupport {
     @Test
     public void testRemoveRouteAndThenAddAgain() throws Exception {
-        MockEndpoint out = getMockEndpoint("mock:out");
+        final MockEndpoint out = getMockEndpoint("mock:out");
         out.expectedMessageCount(1);
         out.expectedBodiesReceived("before removing the route");
 

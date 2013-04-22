@@ -27,7 +27,7 @@ import org.junit.Test;
 public class DisruptorTimeoutDisabledTest extends CamelTestSupport {
     @Test
     public void testDisruptorNoTimeout() throws Exception {
-        Future<String> out = template.asyncRequestBody("disruptor:foo?timeout=0", "World", String.class);
+        final Future<String> out = template.asyncRequestBody("disruptor:foo?timeout=0", "World", String.class);
         // use 5 sec failsafe in case something hangs
         assertEquals("Bye World", out.get(5, TimeUnit.SECONDS));
     }

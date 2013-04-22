@@ -26,10 +26,10 @@ import org.junit.Test;
 public class DisruptorFromRouteIdTest extends CamelTestSupport {
     @Test
     public void testDisruptorFromRouteId() throws Exception {
-        MockEndpoint foo = getMockEndpoint("mock:foo");
+        final MockEndpoint foo = getMockEndpoint("mock:foo");
         foo.expectedMessageCount(1);
 
-        MockEndpoint bar = getMockEndpoint("mock:bar");
+        final MockEndpoint bar = getMockEndpoint("mock:bar");
         bar.expectedMessageCount(1);
 
         template.sendBody("disruptor:foo", "Hello World");

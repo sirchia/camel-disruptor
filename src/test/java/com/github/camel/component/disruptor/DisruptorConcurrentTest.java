@@ -34,7 +34,7 @@ import org.junit.Test;
 public class DisruptorConcurrentTest extends CamelTestSupport {
     @Test
     public void testDisruptorConcurrentInOnly() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedMessageCount(20);
 
         // should at least take 3 sec
@@ -49,7 +49,7 @@ public class DisruptorConcurrentTest extends CamelTestSupport {
 
     @Test
     public void testDisruptorConcurrentInOnlyWithAsync() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedMessageCount(20);
 
         // should at least take 3 sec
@@ -64,18 +64,18 @@ public class DisruptorConcurrentTest extends CamelTestSupport {
 
     @Test
     public void testDisruptorConcurrentInOut() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedMessageCount(20);
         mock.allMessages().body().startsWith("Bye");
 
         // should at least take 3 sec
         mock.setMinimumResultWaitTime(3000);
 
-        ExecutorService executors = Executors.newFixedThreadPool(10);
-        List<Object> replies = new ArrayList<Object>(20);
+        final ExecutorService executors = Executors.newFixedThreadPool(10);
+        final List<Object> replies = new ArrayList<Object>(20);
         for (int i = 0; i < 20; i++) {
             final int num = i;
-            Object out = executors.submit(new Callable<Object>() {
+            final Object out = executors.submit(new Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
                     return template.requestBody("disruptor:bar", "Message " + num);
@@ -92,7 +92,7 @@ public class DisruptorConcurrentTest extends CamelTestSupport {
 
     @Test
     public void testDisruptorConcurrentInOutWithAsync() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedMessageCount(20);
         mock.allMessages().body().startsWith("Bye");
 
@@ -100,14 +100,14 @@ public class DisruptorConcurrentTest extends CamelTestSupport {
         mock.setMinimumResultWaitTime(3000);
 
         // use our own template that has a higher thread pool than default camel that uses 5
-        ExecutorService executor = Executors.newFixedThreadPool(10);
-        ProducerTemplate pt = new DefaultProducerTemplate(context, executor);
+        final ExecutorService executor = Executors.newFixedThreadPool(10);
+        final ProducerTemplate pt = new DefaultProducerTemplate(context, executor);
         // must start the template
         pt.start();
 
-        List<Future<Object>> replies = new ArrayList<Future<Object>>(20);
+        final List<Future<Object>> replies = new ArrayList<Future<Object>>(20);
         for (int i = 0; i < 20; i++) {
-            Future<Object> out = pt.asyncRequestBody("disruptor:bar", "Message " + i);
+            final Future<Object> out = pt.asyncRequestBody("disruptor:bar", "Message " + i);
             replies.add(out);
         }
 
@@ -115,7 +115,7 @@ public class DisruptorConcurrentTest extends CamelTestSupport {
 
         assertEquals(20, replies.size());
         for (int i = 0; i < 20; i++) {
-            String out = (String) replies.get(i).get();
+            final String out = (String) replies.get(i).get();
             assertTrue(out.startsWith("Bye"));
         }
         pt.stop();

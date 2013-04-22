@@ -34,7 +34,7 @@ public class DisruptorInOutBigChainedTest extends CamelTestSupport {
         getMockEndpoint("mock:g").expectedBodiesReceived("start-a-b-c-d-e-f");
         getMockEndpoint("mock:h").expectedBodiesReceived("start-a-b-c-d-e-f-g");
 
-        String reply = template.requestBody("disruptor:a", "start", String.class);
+        final String reply = template.requestBody("disruptor:a", "start", String.class);
         assertEquals("start-a-b-c-d-e-f-g-h", reply);
 
         assertMockEndpointsSatisfied();

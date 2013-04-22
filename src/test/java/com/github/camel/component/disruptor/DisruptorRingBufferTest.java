@@ -26,7 +26,7 @@ import org.junit.Test;
 public class DisruptorRingBufferTest extends CamelTestSupport {
     @Test
     public void testQueue() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedBodiesReceivedInAnyOrder("Hello World", "Bye World", "Goodday World", "Bar");
 
         // Following 3 calls should all reference same Disruptor ring buffer.

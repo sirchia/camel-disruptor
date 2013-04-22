@@ -56,10 +56,10 @@ public class DisruptorWaitForTaskNeverOnCompletionTest extends CamelTestSupport 
 
                 from("direct:start").process(new Processor() {
                     @Override
-                    public void process(Exchange exchange) throws Exception {
+                    public void process(final Exchange exchange) throws Exception {
                         exchange.addOnCompletion(new SynchronizationAdapter() {
                             @Override
-                            public void onDone(Exchange exchange) {
+                            public void onDone(final Exchange exchange) {
                                 done = done + "A";
                                 latch.countDown();
                             }
@@ -67,14 +67,14 @@ public class DisruptorWaitForTaskNeverOnCompletionTest extends CamelTestSupport 
                     }
                 }).to("disruptor:foo?waitForTaskToComplete=Never").process(new Processor() {
                     @Override
-                    public void process(Exchange exchange) throws Exception {
+                    public void process(final Exchange exchange) throws Exception {
                         done = done + "B";
                     }
                 }).to("mock:result");
 
                 from("disruptor:foo").errorHandler(noErrorHandler()).delay(1000).process(new Processor() {
                     @Override
-                    public void process(Exchange exchange) throws Exception {
+                    public void process(final Exchange exchange) throws Exception {
                         done = done + "C";
                     }
                 }).throwException(new IllegalArgumentException("Forced"));

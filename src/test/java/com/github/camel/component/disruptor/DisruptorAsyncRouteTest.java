@@ -26,11 +26,11 @@ import org.junit.Test;
 public class DisruptorAsyncRouteTest extends CamelTestSupport {
     @Test
     public void testSendAsync() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedBodiesReceived("Hello World");
 
         // START SNIPPET: e2
-        Object out = template.requestBody("direct:start", "Hello World");
+        final Object out = template.requestBody("direct:start", "Hello World");
         assertEquals("OK", out);
         // END SNIPPET: e2
 

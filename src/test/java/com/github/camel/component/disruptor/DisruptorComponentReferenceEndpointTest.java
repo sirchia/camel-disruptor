@@ -26,9 +26,9 @@ import org.junit.Test;
 public class DisruptorComponentReferenceEndpointTest extends CamelTestSupport {
     @Test
     public void testDisruptorComponentReference() throws Exception {
-        DisruptorComponent disruptor = context.getComponent("disruptor", DisruptorComponent.class);
+        final DisruptorComponent disruptor = context.getComponent("disruptor", DisruptorComponent.class);
 
-        String fooKey = disruptor.getDisruptorKey("disruptor://foo");
+        final String fooKey = DisruptorComponent.getDisruptorKey("disruptor://foo");
         assertEquals(1, disruptor.getDisruptors().get(fooKey).getEndpointCount());
         assertEquals(2, numberOfReferences(disruptor));
 
@@ -59,7 +59,7 @@ public class DisruptorComponentReferenceEndpointTest extends CamelTestSupport {
 
         // there should still be a bar
         assertEquals(1, numberOfReferences(disruptor));
-        String barKey = disruptor.getDisruptorKey("disruptor://bar");
+        final String barKey = DisruptorComponent.getDisruptorKey("disruptor://bar");
         assertEquals(1, disruptor.getDisruptors().get(barKey).getEndpointCount());
     }
 
@@ -75,9 +75,9 @@ public class DisruptorComponentReferenceEndpointTest extends CamelTestSupport {
         };
     }
 
-    private int numberOfReferences(DisruptorComponent disruptor) {
+    private int numberOfReferences(final DisruptorComponent disruptor) {
         int num = 0;
-        Iterator<DisruptorReference> it = disruptor.getDisruptors().values().iterator();
+        final Iterator<DisruptorReference> it = disruptor.getDisruptors().values().iterator();
         while (it.hasNext()) {
             num += it.next().getEndpointCount();
         }

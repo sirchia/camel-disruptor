@@ -39,7 +39,7 @@ public class BasicDisruptorComponentTest extends CamelTestSupport {
 
     private static final Integer VALUE = Integer.valueOf(42);
 
-    private ThreadCounter threadCounter = new ThreadCounter();
+    private final ThreadCounter threadCounter = new ThreadCounter();
 
     @Test
     public void testProduce() throws InterruptedException {
@@ -57,11 +57,11 @@ public class BasicDisruptorComponentTest extends CamelTestSupport {
     public void testAsynchronous() throws InterruptedException {
         threadCounter.reset();
         
-        int messagesSent = 1000;
+        final int messagesSent = 1000;
 
         resultEndpoint.setExpectedMessageCount(messagesSent);
 
-        long currentThreadId = Thread.currentThread().getId();
+        final long currentThreadId = Thread.currentThread().getId();
 
         for (int i = 0; i < messagesSent; ++i) {
             template.asyncSendBody("disruptor:testAsynchronous", VALUE);
@@ -78,7 +78,7 @@ public class BasicDisruptorComponentTest extends CamelTestSupport {
     public void testMultipleConsumers() throws InterruptedException {
         threadCounter.reset();
         
-        int messagesSent = 1000;
+        final int messagesSent = 1000;
 
         resultEndpoint.setExpectedMessageCount(messagesSent);
 
@@ -113,14 +113,14 @@ public class BasicDisruptorComponentTest extends CamelTestSupport {
 
     private static final class ThreadCounter implements Processor {
 
-        private Set<Long> threadIds = new HashSet<Long>();
+        private final Set<Long> threadIds = new HashSet<Long>();
 
         public void reset() {
             threadIds.clear();
         }
         
         @Override
-        public void process(Exchange exchange) throws Exception {
+        public void process(final Exchange exchange) throws Exception {
             threadIds.add(Thread.currentThread().getId());
         }
 

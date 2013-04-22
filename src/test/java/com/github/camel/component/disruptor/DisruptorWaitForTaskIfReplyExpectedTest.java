@@ -32,7 +32,7 @@ public class DisruptorWaitForTaskIfReplyExpectedTest extends CamelTestSupport {
     @Test
     public void testInOut() throws Exception {
         getMockEndpoint("mock:result").expectedBodiesReceived("Bye World");
-        String out = template.requestBody("direct:start", "Hello World", String.class);
+        final String out = template.requestBody("direct:start", "Hello World", String.class);
         assertEquals("Bye World", out);
         assertMockEndpointsSatisfied();
 
@@ -41,9 +41,9 @@ public class DisruptorWaitForTaskIfReplyExpectedTest extends CamelTestSupport {
     @Test
     public void testInOnly() throws Exception {
         getMockEndpoint("mock:result").expectedBodiesReceived("Bye World");
-        Exchange out = template.send("direct:start", new Processor() {
+        final Exchange out = template.send("direct:start", new Processor() {
             @Override
-            public void process(Exchange exchange) throws Exception {
+            public void process(final Exchange exchange) throws Exception {
                 exchange.getIn().setBody("Hello World");
                 exchange.setPattern(ExchangePattern.InOnly);
             }

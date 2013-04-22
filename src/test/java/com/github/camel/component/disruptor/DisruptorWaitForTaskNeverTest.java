@@ -30,7 +30,7 @@ public class DisruptorWaitForTaskNeverTest extends CamelTestSupport {
     public void testInOut() throws Exception {
         getMockEndpoint("mock:result").expectedBodiesReceived("Bye World");
 
-        String out = template.requestBody("direct:start", "Hello World", String.class);
+        final String out = template.requestBody("direct:start", "Hello World", String.class);
         // we do not wait for the response so we just get our own input back
         assertEquals("Hello World", out);
 
@@ -41,9 +41,9 @@ public class DisruptorWaitForTaskNeverTest extends CamelTestSupport {
     public void testInOnly() throws Exception {
         getMockEndpoint("mock:result").expectedBodiesReceived("Bye World");
 
-        Exchange out = template.send("direct:start", new Processor() {
+        final Exchange out = template.send("direct:start", new Processor() {
             @Override
-            public void process(Exchange exchange) throws Exception {
+            public void process(final Exchange exchange) throws Exception {
                 exchange.getIn().setBody("Hello World");
                 exchange.setPattern(ExchangePattern.InOnly);
             }

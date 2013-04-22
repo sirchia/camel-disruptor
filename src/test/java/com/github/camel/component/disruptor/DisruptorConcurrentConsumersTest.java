@@ -26,7 +26,7 @@ import org.junit.Test;
 public class DisruptorConcurrentConsumersTest extends CamelTestSupport {
     @Test
     public void testSendToDisruptor() throws Exception {
-        MockEndpoint mock = getMockEndpoint("mock:result");
+        final MockEndpoint mock = getMockEndpoint("mock:result");
         mock.expectedBodiesReceived("Hello World");
 
         template.sendBody("disruptor:foo?concurrentConsumers=5", "Hello World");

@@ -28,8 +28,8 @@ import static org.junit.Assert.assertTrue;
 public class DisruptorWaitStrategyCreationTest {
     @Test
     public void testCreateWaitStrategyInstance() throws Exception {
-        for (DisruptorWaitStrategy strategy : DisruptorWaitStrategy.values()) {
-            WaitStrategy waitStrategyInstance = strategy.createWaitStrategyInstance();
+        for (final DisruptorWaitStrategy strategy : DisruptorWaitStrategy.values()) {
+            final WaitStrategy waitStrategyInstance = strategy.createWaitStrategyInstance();
 
             assertNotNull(waitStrategyInstance);
             assertTrue(waitStrategyInstance instanceof WaitStrategy);
