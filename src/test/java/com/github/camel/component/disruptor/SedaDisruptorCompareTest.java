@@ -17,11 +17,6 @@
 package com.github.camel.component.disruptor;
 
 import com.lmax.disruptor.collections.Histogram;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.*;
 import org.apache.camel.*;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.seda.SedaEndpoint;
@@ -30,6 +25,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.*;
 
 /**
  * This class does not perform any functional test, but instead makes a comparison between the performance of the
@@ -265,7 +266,14 @@ public class SedaDisruptorCompareTest extends CamelTestSupport {
                     endpointSizeQueue.offer(sedaEndpoint.getCurrentQueueSize());
                 } else if (endpoint instanceof DisruptorEndpoint) {
                     final DisruptorEndpoint disruptorEndpoint = (DisruptorEndpoint) endpoint;
-                    endpointSizeQueue.offer((int) (disruptorEndpoint.getSize() - disruptorEndpoint.remainingCapacity()));
+
+                    long remainingCapacity = 0;
+                    try {
+                        remainingCapacity = disruptorEndpoint.remainingCapacity();
+                    } catch (DisruptorNotStartedException e) {
+                        //ignore
+                    }
+                    endpointSizeQueue.offer((int) (disruptorEndpoint.getSize() - remainingCapacity));
                 }
             }
         };

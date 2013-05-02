@@ -16,8 +16,6 @@
 
 package com.github.camel.component.disruptor;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import org.apache.camel.AsyncCallback;
 import org.apache.camel.Exchange;
 import org.apache.camel.ExchangeTimedOutException;
@@ -25,6 +23,9 @@ import org.apache.camel.WaitForTaskToComplete;
 import org.apache.camel.impl.DefaultAsyncProducer;
 import org.apache.camel.support.SynchronizationAdapter;
 import org.apache.camel.util.ExchangeHelper;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A Producer for the Disruptor component.
@@ -110,7 +111,12 @@ public class DisruptorProducer extends DefaultAsyncProducer {
             });
 
             log.trace("Publishing Exchange to disruptor ringbuffer: {}", copy);
-            endpoint.publish(copy);
+            try {
+                endpoint.publish(copy);
+            } catch (DisruptorNotStartedException e) {
+                log.trace("Exception while publishing Exchange to disruptor ringbuffer", e);
+                copy.setException(e);
+            }
 
             if (timeout > 0) {
                 if (log.isTraceEnabled()) {
@@ -156,7 +162,12 @@ public class DisruptorProducer extends DefaultAsyncProducer {
             // handover the completion so its the copy which performs that, as we do not wait
             final Exchange copy = prepareCopy(exchange, true);
             log.trace("Publishing Exchange to disruptor ringbuffer: {}", copy);
-            endpoint.publish(copy);
+            try {
+                endpoint.publish(copy);
+            } catch (DisruptorNotStartedException e) {
+                log.trace("Exception while publishing Exchange to disruptor ringbuffer", e);
+                copy.setException(e);
+            }
         }
 
         // we use OnCompletion on the Exchange to callback and wait for the Exchange to be done

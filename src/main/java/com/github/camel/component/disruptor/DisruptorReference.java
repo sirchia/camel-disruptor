@@ -19,11 +19,14 @@ package com.github.camel.component.disruptor;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
-import java.util.*;
-import java.util.concurrent.*;
 import org.apache.camel.Exchange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * Holder for Disruptor references.
@@ -38,12 +41,15 @@ class DisruptorReference {
     private final DisruptorComponent component;
     private final String uri;
 
-    //TODO ascertain thread safe access to disruptor
-    private Disruptor<ExchangeEvent> disruptor;
+    //The mark on the reference indicates if we are in the process of reconfiguring the Disruptor:
+    //(ref,   mark) : Description
+    //(null, false) : not started or completely shut down
+    //(null,  true) : in process of reconfiguring
+    //( x  , false) : normally functioning Disruptor
+    //( x  ,  true) : never set
+    private final AtomicMarkableReference<Disruptor<ExchangeEvent>> disruptor = new AtomicMarkableReference<Disruptor<ExchangeEvent>>(null, false);
 
     private final DelayedExecutor delayedExecutor = new DelayedExecutor();
-
-    private ExecutorService executor;
 
     private final ProducerType producerType;
 
@@ -51,9 +57,12 @@ class DisruptorReference {
 
     private final DisruptorWaitStrategy waitStrategy;
 
-    private LifecycleAwareExchangeEventHandler[] handlers = new LifecycleAwareExchangeEventHandler[0];
-
     private final Queue<Exchange> temporaryExchangeBuffer;
+
+    //access guarded by this
+    private ExecutorService executor;
+
+    private LifecycleAwareExchangeEventHandler[] handlers = new LifecycleAwareExchangeEventHandler[0];
 
     DisruptorReference(final DisruptorComponent component, final String uri, final int size, final ProducerType producerType, final DisruptorWaitStrategy waitStrategy)
             throws Exception {
@@ -66,54 +75,54 @@ class DisruptorReference {
         reconfigure();
     }
 
-    private void createDisruptor() throws Exception {
-        disruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE, size, delayedExecutor, producerType,
-                waitStrategy.createWaitStrategyInstance());
-    }
-
-    public int getEndpointCount() {
-        return endpoints.size();
-    }
-
     public boolean hasNullReference() {
-        return disruptor == null;
+        return disruptor.getReference() == null;
     }
 
-    public void publish(final Exchange exchange) {
-        final RingBuffer<ExchangeEvent> ringBuffer = disruptor.getRingBuffer();
+    private Disruptor<ExchangeEvent> getCurrentDisruptor() throws DisruptorNotStartedException {
+        Disruptor<ExchangeEvent> currentDisruptor = disruptor.getReference();
 
+        if (currentDisruptor == null) {
+            // no current Disruptor reference, we may be reconfiguring or it was not started
+            // check which by looking at the reference mark...
+            boolean[] changeIsPending = new boolean[1];
+
+            while (currentDisruptor == null) {
+                currentDisruptor = disruptor.get(changeIsPending);
+                //Check if we are reconfiguring
+                if (currentDisruptor == null && !changeIsPending[0]) {
+                    throw new DisruptorNotStartedException("Disruptor is not yet started or already shut down.");
+                } else if (currentDisruptor == null && changeIsPending[0]) {
+                    //We should be back shortly...keep trying but spare CPU resources
+                    LockSupport.parkNanos(1L);
+                }
+            }
+        }
+
+        return currentDisruptor;
+    }
+
+    public void publish(final Exchange exchange) throws DisruptorNotStartedException {
+        publishExchangeOnRingBuffer(exchange, getCurrentDisruptor().getRingBuffer());
+    }
+
+    private static void publishExchangeOnRingBuffer(final Exchange exchange,
+                                                    final RingBuffer<ExchangeEvent> ringBuffer) {
         final long sequence = ringBuffer.next();
         ringBuffer.get(sequence).setExchange(exchange);
         ringBuffer.publish(sequence);
     }
 
-    public void reconfigure() throws Exception {
-        /*
-            TODO handle reconfigure correctly with a full buffer and producers blocking
-            Instead of blocking until a fre spot on the ringbuffer is avaiable, they now
-            probably get an exception
-         */
-        shutdown();
-
-        createDisruptor();
-
-        final ArrayList<LifecycleAwareExchangeEventHandler> eventHandlers = new ArrayList<LifecycleAwareExchangeEventHandler>();
-
-        for (final DisruptorEndpoint endpoint : endpoints) {
-            final Collection<LifecycleAwareExchangeEventHandler> consumerEventHandlers = endpoint.createConsumerEventHandlers();
-
-            if (consumerEventHandlers != null) {
-                eventHandlers.addAll(consumerEventHandlers);
-            }
-        }
-
-        handleEventsWith(eventHandlers.toArray(new LifecycleAwareExchangeEventHandler[eventHandlers.size()]));
+    public synchronized void reconfigure() throws Exception {
+        shutdownDisruptor(true);
 
         start();
     }
 
-    private void start() {
-        disruptor.start();
+    private void start() throws Exception {
+        Disruptor<ExchangeEvent> newDisruptor = createDisruptor();
+
+        newDisruptor.start();
 
         if (executor != null) {
             //and use our delayed executor to really really execute the event handlers now
@@ -131,7 +140,7 @@ class DisruptorReference {
                     if (!handler.awaitStarted(10, TimeUnit.SECONDS)) {
                         //we wait for a relatively long, but limited amount of time to prevent an application using
                         //this component from hanging indefinitely
-                        //Please report a bug if you can repruduce this
+                        //Please report a bug if you can reproduce this
                         LOGGER.error("Disruptor/event handler failed to start properly, PLEASE REPORT");
                     }
                     eventHandlerStarted = true;
@@ -141,27 +150,93 @@ class DisruptorReference {
             }
         }
 
+        publishBufferedExchanges(newDisruptor);
+
+        disruptor.set(newDisruptor, false);
+    }
+
+    private Disruptor<ExchangeEvent> createDisruptor() throws Exception {
+        //create a new Disruptor
+        final Disruptor<ExchangeEvent> newDisruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE, size, delayedExecutor, producerType,
+                waitStrategy.createWaitStrategyInstance());
+
+        //determine the list of eventhandlers to be associated to the Disruptor
+        final ArrayList<LifecycleAwareExchangeEventHandler> eventHandlers = new ArrayList<LifecycleAwareExchangeEventHandler>();
+
+        for (final DisruptorEndpoint endpoint : endpoints) {
+            final Collection<LifecycleAwareExchangeEventHandler> consumerEventHandlers = endpoint.createConsumerEventHandlers();
+
+            if (consumerEventHandlers != null) {
+                eventHandlers.addAll(consumerEventHandlers);
+            }
+        }
+
+        handleEventsWith(newDisruptor, eventHandlers.toArray(new LifecycleAwareExchangeEventHandler[eventHandlers.size()]));
+
+        return newDisruptor;
+    }
+
+    private void handleEventsWith(Disruptor<ExchangeEvent> newDisruptor, final LifecycleAwareExchangeEventHandler[] newHandlers) {
+        if (newHandlers == null || newHandlers.length == 0) {
+            handlers = new LifecycleAwareExchangeEventHandler[1];
+            handlers[0] = new BlockingExchangeEventHandler();
+        } else {
+            handlers = newHandlers;
+        }
+        resizeThreadPoolExecutor(handlers.length);
+        newDisruptor.handleEventsWith(handlers);
+    }
+
+    private void publishBufferedExchanges(Disruptor<ExchangeEvent> newDisruptor) {
         //now empty out all buffered Exchange if we had any
         final List<Exchange> exchanges = new ArrayList<Exchange>(temporaryExchangeBuffer.size());
         while (!temporaryExchangeBuffer.isEmpty()) {
             exchanges.add(temporaryExchangeBuffer.remove());
         }
+        RingBuffer<ExchangeEvent> ringBuffer = newDisruptor.getRingBuffer();
         //and offer them again to our new ringbuffer
         for (final Exchange exchange : exchanges) {
-            publish(exchange);
+            publishExchangeOnRingBuffer(exchange, ringBuffer);
         }
     }
 
-    private void shutdown() {
-        if (disruptor != null) {
+    private void resizeThreadPoolExecutor(final int newSize) {
+        if (executor == null && newSize > 0) {
+            //no thread pool executor yet, create a new one
+            executor = component.getCamelContext().getExecutorServiceManager().newFixedThreadPool(this, uri,
+                    newSize);
+        } else if (executor != null && newSize <= 0) {
+            //we need to shut down our executor
+            component.getCamelContext().getExecutorServiceManager().shutdown(executor);
+            executor = null;
+        } else if (executor instanceof ThreadPoolExecutor) {
+            //our thread pool executor is of type ThreadPoolExecutor, we know how to resize it
+            final ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) executor;
+            threadPoolExecutor.setCorePoolSize(newSize);
+            threadPoolExecutor.setMaximumPoolSize(newSize);
+        } else if (newSize > 0) {
+            //hmmm...no idea what kind of executor this is...just kill it and start fresh
+            component.getCamelContext().getExecutorServiceManager().shutdown(executor);
+
+            executor = component.getCamelContext().getExecutorServiceManager().newFixedThreadPool(this, uri,
+                    newSize);
+        }
+    }
+
+    private synchronized void shutdownDisruptor(boolean isReconfiguring) {
+        Disruptor<ExchangeEvent> currentDisruptor = disruptor.getReference();
+        disruptor.set(null, isReconfiguring);
+
+        if (currentDisruptor != null) {
             //check if we had a blocking event handler to keep an empty disruptor 'busy'
             if (handlers != null && handlers.length == 1 && handlers[0] instanceof BlockingExchangeEventHandler) {
-                //yes we did, unblock it so we can get rid of our backlog empty its pending exchanged in our temporary buffer
+                // yes we did, unblock it so we can get rid of our backlog,
+                // The eventhandler will empty its pending exchanges in our temporary buffer
                 final BlockingExchangeEventHandler blockingExchangeEventHandler = (BlockingExchangeEventHandler) handlers[0];
                 blockingExchangeEventHandler.unblock();
             }
 
-            disruptor.shutdown();
+            currentDisruptor.shutdown();
 
             //they have already been given a trigger to halt when they are done by shutting down the disruptor
             //we do however want to await their completion before they are scheduled to process events from the new
@@ -187,29 +262,18 @@ class DisruptorReference {
             }
 
             handlers = new LifecycleAwareExchangeEventHandler[0];
-
-            disruptor = null;
         }
+    }
 
+    private synchronized void shutdownExecutor() {
         if (executor != null) {
             component.getCamelContext().getExecutorServiceManager().shutdown(executor);
             executor = null;
         }
     }
 
-    private void handleEventsWith(final LifecycleAwareExchangeEventHandler[] newHandlers) {
-        if (newHandlers == null || newHandlers.length == 0) {
-            handlers = new LifecycleAwareExchangeEventHandler[1];
-            handlers[0] = new BlockingExchangeEventHandler();
-        } else {
-            handlers = newHandlers;
-        }
-        resizeThreadPoolExecutor(handlers.length);
-        disruptor.handleEventsWith(handlers);
-    }
-
-    public long remainingCapacity() {
-        return disruptor.getRingBuffer().remainingCapacity();
+    public long remainingCapacity() throws DisruptorNotStartedException {
+        return getCurrentDisruptor().getRingBuffer().remainingCapacity();
     }
 
     public DisruptorWaitStrategy getWaitStrategy() {
@@ -221,48 +285,37 @@ class DisruptorReference {
     }
 
     public int getBufferSize() {
-        return disruptor.getRingBuffer().getBufferSize();
-    }
-
-    public void addEndpoint(final DisruptorEndpoint disruptorEndpoint) {
-        endpoints.add(disruptorEndpoint);
-    }
-
-    public void removeEndpoint(final DisruptorEndpoint disruptorEndpoint) {
-        if (getEndpointCount() == 1) {
-            this.shutdown();
-        }
-        endpoints.remove(disruptorEndpoint);
+        return size;
     }
 
     public int getPendingExchangeSize() {
-        if (disruptor != null) {
-            return (int) (getBufferSize() - remainingCapacity() + temporaryExchangeBuffer.size());
+        try {
+            if (!hasNullReference()) {
+                return (int) (getBufferSize() - remainingCapacity() + temporaryExchangeBuffer.size());
+            }
+        } catch (DisruptorNotStartedException e) {
+            //fall through...
         }
         return temporaryExchangeBuffer.size();
     }
 
-    private void resizeThreadPoolExecutor(final int newSize) {
-        if (executor == null && newSize > 0) {
-            //no thread pool executor yet, create a new one
-            executor = component.getCamelContext().getExecutorServiceManager().newFixedThreadPool(this, uri,
-                    newSize);
-        } else if (executor != null && newSize <= 0) {
-            //we need to shut down our executor
-            component.getCamelContext().getExecutorServiceManager().shutdown(executor);
-            executor = null;
-        } else if (executor instanceof ThreadPoolExecutor) {
-            //our thread pool executor is of type ThreadPoolExecutor, we know how to resize it
-            final ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) executor;
-            threadPoolExecutor.setCorePoolSize(newSize);
-            threadPoolExecutor.setMaximumPoolSize(newSize);
-        } else if (newSize > 0) {
-            //hmmm...no idea what kind of executor this is...just kill it and start fresh
-            component.getCamelContext().getExecutorServiceManager().shutdown(executor);
+    public synchronized void addEndpoint(final DisruptorEndpoint disruptorEndpoint) {
+        endpoints.add(disruptorEndpoint);
+    }
 
-            executor = component.getCamelContext().getExecutorServiceManager().newFixedThreadPool(this, uri,
-                    newSize);
+    public synchronized void removeEndpoint(final DisruptorEndpoint disruptorEndpoint) {
+        if (getEndpointCount() == 1) {
+            //Shutdown our disruptor
+            shutdownDisruptor(false);
+
+            //As there are no endpoints dependent on this Disruptor, we may also shutdown our executor
+            shutdownExecutor();
         }
+        endpoints.remove(disruptorEndpoint);
+    }
+
+    public synchronized int getEndpointCount() {
+        return endpoints.size();
     }
 
     /**

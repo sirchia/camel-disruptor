@@ -17,14 +17,15 @@
 package com.github.camel.component.disruptor;
 
 import com.lmax.disruptor.dsl.ProducerType;
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArraySet;
 import org.apache.camel.*;
 import org.apache.camel.api.management.ManagedAttribute;
 import org.apache.camel.api.management.ManagedOperation;
 import org.apache.camel.impl.DefaultEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * TODO: documentation
@@ -58,7 +59,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     }
 
     @ManagedOperation(description = "Remaining capacity in ring buffer")
-    public long remainingCapacity() {
+    public long remainingCapacity() throws DisruptorNotStartedException {
         return getDisruptor().remainingCapacity();
     }
 
@@ -205,7 +206,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
      *
      * @param exchange
      */
-    void publish(final Exchange exchange) {
+    void publish(final Exchange exchange) throws DisruptorNotStartedException {
         disruptorReference.publish(exchange);
     }
 
