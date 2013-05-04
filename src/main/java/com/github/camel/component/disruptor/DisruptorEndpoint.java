@@ -16,7 +16,7 @@
 
 package com.github.camel.component.disruptor;
 
-import com.lmax.disruptor.dsl.ProducerType;
+import com.lmax.disruptor.InsufficientCapacityException;
 import org.apache.camel.*;
 import org.apache.camel.api.management.ManagedAttribute;
 import org.apache.camel.api.management.ManagedOperation;
@@ -28,8 +28,11 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * TODO: documentation
+ * An implementation of the <a href="https://github.com/sirchia/camel-disruptor">Disruptor component</a>
+ * for asynchronous SEDA exchanges on an
+ * <a href="https://github.com/LMAX-Exchange/disruptor">LMAX Disruptor</a> within a CamelContext
  */
+
 public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsumersSupport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DisruptorEndpoint.class);
@@ -41,16 +44,19 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     private long timeout = 30000;
 
+    private boolean blockWhenFull;
+
     private final Set<DisruptorProducer> producers = new CopyOnWriteArraySet<DisruptorProducer>();
     private final Set<DisruptorConsumer> consumers = new CopyOnWriteArraySet<DisruptorConsumer>();
 
     private final DisruptorReference disruptorReference;
 
-    public DisruptorEndpoint(final String endpointUri, final Component component, final DisruptorReference disruptorReference, final int concurrentConsumers, final boolean multipleConsumers) throws Exception {
+    public DisruptorEndpoint(final String endpointUri, final Component component, final DisruptorReference disruptorReference, final int concurrentConsumers, final boolean multipleConsumers, boolean blockWhenFull) throws Exception {
         super(endpointUri, component);
         this.disruptorReference = disruptorReference;
         this.concurrentConsumers = concurrentConsumers;
         this.multipleConsumers = multipleConsumers;
+        this.blockWhenFull = blockWhenFull;
     }
 
     @ManagedAttribute(description = "Buffer max capacity")
@@ -111,6 +117,15 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
         return isMultipleConsumers();
     }
 
+    @ManagedAttribute
+    public boolean isBlockWhenFull() {
+        return blockWhenFull;
+    }
+
+    public void setBlockWhenFull(boolean blockWhenFull) {
+        this.blockWhenFull = blockWhenFull;
+    }
+
     @Override
     public boolean isSingleton() {
         return true;
@@ -118,10 +133,10 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     @Override
     public Producer createProducer() throws Exception {
-        if (getProducers().size() == 1 && getDisruptor().getProducerType() == ProducerType.SINGLE) {
+        if (getProducers().size() == 1 && getDisruptor().getProducerType() == DisruptorProducerType.Single) {
             throw new IllegalStateException("Endpoint can't support multiple producers when ProducerType SINGLE is configured");
         }
-        return new DisruptorProducer(this, getWaitForTaskToComplete(), getTimeout());
+        return new DisruptorProducer(this, getWaitForTaskToComplete(), getTimeout(), isBlockWhenFull());
     }
 
     @Override
@@ -202,12 +217,23 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     }
 
     /**
-     * Called by DisruptorProducers to publish new exchanges on the RingBuffer
+     * Called by DisruptorProducers to publish new exchanges on the RingBuffer, blocking when full
      *
      * @param exchange
      */
     void publish(final Exchange exchange) throws DisruptorNotStartedException {
         disruptorReference.publish(exchange);
+    }
+
+    /**
+     * Called by DisruptorProducers to publish new exchanges on the RingBuffer, throwing InsufficientCapacityException
+     * when full
+     *
+     * @param exchange
+     * @throws InsufficientCapacityException when the Ringbuffer is full.
+     */
+    void tryPublish(final Exchange exchange) throws DisruptorNotStartedException, InsufficientCapacityException {
+        disruptorReference.tryPublish(exchange);
     }
 
     DisruptorReference getDisruptor() {

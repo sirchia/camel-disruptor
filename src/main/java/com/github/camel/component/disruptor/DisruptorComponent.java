@@ -16,20 +16,18 @@
 
 package com.github.camel.component.disruptor;
 
-import com.lmax.disruptor.dsl.ProducerType;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.camel.Endpoint;
 import org.apache.camel.impl.DefaultComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
- * TODO: documentation
- * Parameters:
- * - bufferSize: size of the ringbuffer (will be rounded up to nearest power of 2), default 1024
- * - concurrentConsumers: number of concurrent threads processing exchanges, default 1
- * - multipleConsumers: whether multiple consumers or Publish-Subscribe style multicast is supported, default false
+ * An implementation of the <a href="https://github.com/sirchia/camel-disruptor">Disruptor component</a>
+ * for asynchronous SEDA exchanges on an
+ * <a href="https://github.com/LMAX-Exchange/disruptor">LMAX Disruptor</a> within a CamelContext
  */
 public class DisruptorComponent extends DefaultComponent {
 
@@ -45,8 +43,9 @@ public class DisruptorComponent extends DefaultComponent {
 
     private int defaultConcurrentConsumers = 1;
     private boolean defaultMultipleConsumers = false;
-    private ProducerType defaultProducerType = ProducerType.MULTI;
-    private DisruptorWaitStrategy defaultWaitStrategy = DisruptorWaitStrategy.BLOCKING;
+    private DisruptorProducerType defaultProducerType = DisruptorProducerType.Multi;
+    private DisruptorWaitStrategy defaultWaitStrategy = DisruptorWaitStrategy.Blocking;
+    private boolean defaultBlockWhenFull = true;
 
     //synchronized access guarded by this
     private final Map<String, DisruptorReference> disruptors = new HashMap<String, DisruptorReference>();
@@ -73,23 +72,29 @@ public class DisruptorComponent extends DefaultComponent {
             }
         }
 
-        //TODO actually use pollTimeout parameter?
-        parameters.remove("pollTimeout");
+        // Check if the pollTimeout argument is set (may be the case if Disruptor component is used as drop-in
+        // replacement for the SEDA component.
+        if (parameters.containsKey("pollTimeout")) {
+            throw new IllegalArgumentException("The 'pollTimeout' argument is not supported by the Disruptor component");
+        }
 
         final DisruptorWaitStrategy waitStrategy = getAndRemoveParameter(parameters, "waitStrategy", DisruptorWaitStrategy.class, defaultWaitStrategy);
 
-        final ProducerType producerType = getAndRemoveParameter(parameters, "producerType", ProducerType.class, defaultProducerType);
+        final DisruptorProducerType producerType = getAndRemoveParameter(parameters, "producerType", DisruptorProducerType.class, defaultProducerType);
 
         final boolean multipleConsumers = getAndRemoveParameter(parameters, "multipleConsumers", boolean.class, defaultMultipleConsumers);
 
+        final boolean blockWhenFull = getAndRemoveParameter(parameters, "blockWhenFull", boolean.class, defaultBlockWhenFull);
+
         final DisruptorReference disruptorReference = getOrCreateDisruptor(uri, size, producerType, waitStrategy);
-        final DisruptorEndpoint disruptorEndpoint = new DisruptorEndpoint(uri, this, disruptorReference, concurrentConsumers, multipleConsumers);
+        final DisruptorEndpoint disruptorEndpoint = new DisruptorEndpoint(uri, this, disruptorReference,
+                concurrentConsumers, multipleConsumers, blockWhenFull);
         disruptorEndpoint.configureProperties(parameters);
 
         return disruptorEndpoint;
     }
 
-    private DisruptorReference getOrCreateDisruptor(final String uri, final int size, final ProducerType producerType, final DisruptorWaitStrategy waitStrategy)
+    private DisruptorReference getOrCreateDisruptor(final String uri, final int size, final DisruptorProducerType producerType, final DisruptorWaitStrategy waitStrategy)
             throws Exception {
         final String key = getDisruptorKey(uri);
 
@@ -161,11 +166,11 @@ public class DisruptorComponent extends DefaultComponent {
         this.defaultMultipleConsumers = defaultMultipleConsumers;
     }
 
-    public ProducerType getDefaultProducerType() {
+    public DisruptorProducerType getDefaultProducerType() {
         return defaultProducerType;
     }
 
-    public void setDefaultProducerType(final ProducerType defaultProducerType) {
+    public void setDefaultProducerType(final DisruptorProducerType defaultProducerType) {
         this.defaultProducerType = defaultProducerType;
     }
 
@@ -175,6 +180,14 @@ public class DisruptorComponent extends DefaultComponent {
 
     public void setDefaultWaitStrategy(final DisruptorWaitStrategy defaultWaitStrategy) {
         this.defaultWaitStrategy = defaultWaitStrategy;
+    }
+
+    public boolean isDefaultBlockWhenFull() {
+        return defaultBlockWhenFull;
+    }
+
+    public void setDefaultBlockWhenFull(boolean defaultBlockWhenFull) {
+        this.defaultBlockWhenFull = defaultBlockWhenFull;
     }
 
     @Deprecated

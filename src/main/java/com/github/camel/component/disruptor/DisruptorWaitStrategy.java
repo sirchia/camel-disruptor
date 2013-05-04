@@ -20,7 +20,7 @@ import com.lmax.disruptor.*;
 
 /**
  * This enumeration holds all values that may be used as the {@link WaitStrategy} used by producers on a Disruptor.
- * BLOCKING is the default {@link WaitStrategy}.
+ * Blocking is the default {@link WaitStrategy}.
  */
 public enum DisruptorWaitStrategy {
     /**
@@ -28,7 +28,7 @@ public enum DisruptorWaitStrategy {
      *
      * This strategy can be used when throughput and low-latency are not as important as CPU resource.
      */
-    BLOCKING(BlockingWaitStrategy.class),
+    Blocking(BlockingWaitStrategy.class),
 
     /**
      * Sleeping strategy that initially spins, then uses a Thread.yield(), and eventually for the minimum number of nanos
@@ -36,7 +36,7 @@ public enum DisruptorWaitStrategy {
      *
      * This strategy is a good compromise between performance and CPU resource. Latency spikes can occur after quiet periods.
      */
-    SLEEPING(SleepingWaitStrategy.class),
+    Sleeping(SleepingWaitStrategy.class),
 
     /**
      * Busy Spin strategy that uses a busy spin loop for {@link com.lmax.disruptor.EventProcessor}s waiting on a barrier.
@@ -44,7 +44,7 @@ public enum DisruptorWaitStrategy {
      * This strategy will use CPU resource to avoid syscalls which can introduce latency jitter.  It is best
      * used when threads can be bound to specific CPU cores.
      */
-    BUSY_SPIN(BusySpinWaitStrategy.class),
+    BusySpin(BusySpinWaitStrategy.class),
 
     /**
      * Yielding strategy that uses a Thread.yield() for {@link com.lmax.disruptor.EventProcessor}s waiting on a barrier
@@ -52,7 +52,7 @@ public enum DisruptorWaitStrategy {
      *
      * This strategy is a good compromise between performance and CPU resource without incurring significant latency spikes.
      */
-    YIELDING(YieldingWaitStrategy.class);
+    Yielding(YieldingWaitStrategy.class);
 
 //    TODO PhasedBackoffWaitStrategy constructor requires parameters, unlike the other strategies. We leave it out for now
 //    /**

@@ -16,6 +16,7 @@
 
 package com.github.camel.component.disruptor;
 
+import com.lmax.disruptor.InsufficientCapacityException;
 import org.apache.camel.AsyncCallback;
 import org.apache.camel.Exchange;
 import org.apache.camel.ExchangeTimedOutException;
@@ -36,12 +37,15 @@ public class DisruptorProducer extends DefaultAsyncProducer {
     private final long timeout;
 
     private final DisruptorEndpoint endpoint;
+    private boolean blockWhenFull;
 
-    public DisruptorProducer(final DisruptorEndpoint endpoint, final WaitForTaskToComplete waitForTaskToComplete, final long timeout) {
+    public DisruptorProducer(final DisruptorEndpoint endpoint, final WaitForTaskToComplete waitForTaskToComplete,
+                             final long timeout, boolean blockWhenFull) {
         super(endpoint);
         this.waitForTaskToComplete = waitForTaskToComplete;
         this.timeout = timeout;
         this.endpoint = endpoint;
+        this.blockWhenFull = blockWhenFull;
     }
 
     @Override
@@ -110,13 +114,7 @@ public class DisruptorProducer extends DefaultAsyncProducer {
                 }
             });
 
-            log.trace("Publishing Exchange to disruptor ringbuffer: {}", copy);
-            try {
-                endpoint.publish(copy);
-            } catch (DisruptorNotStartedException e) {
-                log.trace("Exception while publishing Exchange to disruptor ringbuffer", e);
-                copy.setException(e);
-            }
+            doPublish(copy);
 
             if (timeout > 0) {
                 if (log.isTraceEnabled()) {
@@ -161,19 +159,29 @@ public class DisruptorProducer extends DefaultAsyncProducer {
             // no wait, eg its a InOnly then just publish to the ringbuffer and return
             // handover the completion so its the copy which performs that, as we do not wait
             final Exchange copy = prepareCopy(exchange, true);
-            log.trace("Publishing Exchange to disruptor ringbuffer: {}", copy);
-            try {
-                endpoint.publish(copy);
-            } catch (DisruptorNotStartedException e) {
-                log.trace("Exception while publishing Exchange to disruptor ringbuffer", e);
-                copy.setException(e);
-            }
+            doPublish(copy);
         }
 
         // we use OnCompletion on the Exchange to callback and wait for the Exchange to be done
         // so we should just signal the callback we are done synchronously
         callback.done(true);
         return true;
+    }
+
+    private void doPublish(Exchange exchange) {
+        log.trace("Publishing Exchange to disruptor ringbuffer: {}", exchange);
+
+        try {
+            if (blockWhenFull) {
+                endpoint.publish(exchange);
+            } else {
+                endpoint.tryPublish(exchange);
+            }
+        } catch (DisruptorNotStartedException e) {
+            throw new IllegalStateException("Disruptor was not started", e);
+        } catch (InsufficientCapacityException e) {
+            throw new IllegalStateException("Disruptors ringbuffer was full", e);
+        }
     }
 
 

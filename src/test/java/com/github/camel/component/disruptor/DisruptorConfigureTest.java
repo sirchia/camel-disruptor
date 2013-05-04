@@ -15,7 +15,6 @@
  */
 package com.github.camel.component.disruptor;
 
-import com.lmax.disruptor.dsl.ProducerType;
 import org.apache.camel.ResolveEndpointFailedException;
 import org.apache.camel.WaitForTaskToComplete;
 import org.apache.camel.test.junit4.CamelTestSupport;
@@ -80,32 +79,32 @@ public class DisruptorConfigureTest extends CamelTestSupport {
 
     @Test
     public void testProducerTypeConfigured() {
-        final DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo?producerType=SINGLE", DisruptorEndpoint.class);
-        assertEquals("producerType", ProducerType.SINGLE, endpoint.getDisruptor().getProducerType());
+        final DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo?producerType=Single", DisruptorEndpoint.class);
+        assertEquals("producerType", DisruptorProducerType.Single, endpoint.getDisruptor().getProducerType());
     }
 
     @Test
     public void testDefaultProducerTypeComponentProperty() throws Exception {
         final DisruptorComponent disruptor = context.getComponent("disruptor", DisruptorComponent.class);
-        disruptor.setDefaultProducerType(ProducerType.SINGLE);
-        assertEquals(ProducerType.SINGLE, disruptor.getDefaultProducerType());
+        disruptor.setDefaultProducerType(DisruptorProducerType.Single);
+        assertEquals(DisruptorProducerType.Single, disruptor.getDefaultProducerType());
         final DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
-        assertEquals("producerType", ProducerType.SINGLE, endpoint.getDisruptor().getProducerType());
+        assertEquals("producerType", DisruptorProducerType.Single, endpoint.getDisruptor().getProducerType());
     }
 
     @Test
     public void testWaitStrategyConfigured() {
-        final DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo?waitStrategy=BUSY_SPIN", DisruptorEndpoint.class);
-        assertEquals("waitStrategy", DisruptorWaitStrategy.BUSY_SPIN, endpoint.getDisruptor().getWaitStrategy());
+        final DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo?waitStrategy=BusySpin", DisruptorEndpoint.class);
+        assertEquals("waitStrategy", DisruptorWaitStrategy.BusySpin, endpoint.getDisruptor().getWaitStrategy());
     }
 
     @Test
     public void testDefaultWaitStrategyComponentProperty() throws Exception {
         final DisruptorComponent disruptor = context.getComponent("disruptor", DisruptorComponent.class);
-        disruptor.setDefaultWaitStrategy(DisruptorWaitStrategy.BUSY_SPIN);
-        assertEquals(DisruptorWaitStrategy.BUSY_SPIN, disruptor.getDefaultWaitStrategy());
+        disruptor.setDefaultWaitStrategy(DisruptorWaitStrategy.BusySpin);
+        assertEquals(DisruptorWaitStrategy.BusySpin, disruptor.getDefaultWaitStrategy());
         final DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
-        assertEquals("waitStrategy", DisruptorWaitStrategy.BUSY_SPIN, endpoint.getDisruptor().getWaitStrategy());
+        assertEquals("waitStrategy", DisruptorWaitStrategy.BusySpin, endpoint.getDisruptor().getWaitStrategy());
     }
 
     @Test
@@ -136,9 +135,9 @@ public class DisruptorConfigureTest extends CamelTestSupport {
         assertEquals("bufferSize: wrong default", DisruptorComponent.DEFAULT_BUFFER_SIZE, endpoint.getSize());
         assertEquals("timeout: wrong default", 30000L, endpoint.getTimeout());
         assertEquals("waitForTaskToComplete: wrong default", WaitForTaskToComplete.IfReplyExpected, endpoint.getWaitForTaskToComplete());
-        assertEquals("DisruptorWaitStrategy: wrong default", DisruptorWaitStrategy.BLOCKING, endpoint.getDisruptor().getWaitStrategy());
+        assertEquals("DisruptorWaitStrategy: wrong default", DisruptorWaitStrategy.Blocking, endpoint.getDisruptor().getWaitStrategy());
         assertEquals("multipleConsumers: wrong default", false, endpoint.isMultipleConsumers());
         assertEquals("multipleConsumersSupported", false, endpoint.isMultipleConsumersSupported());
-        assertEquals("producerType", ProducerType.MULTI, endpoint.getDisruptor().getProducerType());
+        assertEquals("producerType", DisruptorProducerType.Multi, endpoint.getDisruptor().getProducerType());
     }
 }

@@ -16,9 +16,9 @@
 
 package com.github.camel.component.disruptor;
 
+import com.lmax.disruptor.InsufficientCapacityException;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
-import com.lmax.disruptor.dsl.ProducerType;
 import org.apache.camel.Exchange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +51,7 @@ class DisruptorReference {
 
     private final DelayedExecutor delayedExecutor = new DelayedExecutor();
 
-    private final ProducerType producerType;
+    private final DisruptorProducerType producerType;
 
     private final int size;
 
@@ -64,7 +64,7 @@ class DisruptorReference {
 
     private LifecycleAwareExchangeEventHandler[] handlers = new LifecycleAwareExchangeEventHandler[0];
 
-    DisruptorReference(final DisruptorComponent component, final String uri, final int size, final ProducerType producerType, final DisruptorWaitStrategy waitStrategy)
+    DisruptorReference(final DisruptorComponent component, final String uri, final int size, final DisruptorProducerType producerType, final DisruptorWaitStrategy waitStrategy)
             throws Exception {
         this.component = component;
         this.uri = uri;
@@ -102,6 +102,10 @@ class DisruptorReference {
         return currentDisruptor;
     }
 
+    public void tryPublish(final Exchange exchange) throws DisruptorNotStartedException, InsufficientCapacityException {
+        tryPublishExchangeOnRingBuffer(exchange, getCurrentDisruptor().getRingBuffer());
+    }
+
     public void publish(final Exchange exchange) throws DisruptorNotStartedException {
         publishExchangeOnRingBuffer(exchange, getCurrentDisruptor().getRingBuffer());
     }
@@ -109,6 +113,13 @@ class DisruptorReference {
     private static void publishExchangeOnRingBuffer(final Exchange exchange,
                                                     final RingBuffer<ExchangeEvent> ringBuffer) {
         final long sequence = ringBuffer.next();
+        ringBuffer.get(sequence).setExchange(exchange);
+        ringBuffer.publish(sequence);
+    }
+
+    private static void tryPublishExchangeOnRingBuffer(final Exchange exchange,
+                                                    final RingBuffer<ExchangeEvent> ringBuffer) throws InsufficientCapacityException {
+        final long sequence = ringBuffer.tryNext();
         ringBuffer.get(sequence).setExchange(exchange);
         ringBuffer.publish(sequence);
     }
@@ -157,7 +168,7 @@ class DisruptorReference {
 
     private Disruptor<ExchangeEvent> createDisruptor() throws Exception {
         //create a new Disruptor
-        final Disruptor<ExchangeEvent> newDisruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE, size, delayedExecutor, producerType,
+        final Disruptor<ExchangeEvent> newDisruptor = new Disruptor<ExchangeEvent>(ExchangeEventFactory.INSTANCE, size, delayedExecutor, producerType.getProducerType(),
                 waitStrategy.createWaitStrategyInstance());
 
         //determine the list of eventhandlers to be associated to the Disruptor
@@ -266,10 +277,7 @@ class DisruptorReference {
     }
 
     private synchronized void shutdownExecutor() {
-        if (executor != null) {
-            component.getCamelContext().getExecutorServiceManager().shutdown(executor);
-            executor = null;
-        }
+        resizeThreadPoolExecutor(0);
     }
 
     public long remainingCapacity() throws DisruptorNotStartedException {
@@ -280,7 +288,7 @@ class DisruptorReference {
         return waitStrategy;
     }
 
-    ProducerType getProducerType() {
+    DisruptorProducerType getProducerType() {
         return producerType;
     }
 

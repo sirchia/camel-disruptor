@@ -16,11 +16,6 @@
 
 package com.github.camel.component.disruptor;
 
-import com.lmax.disruptor.dsl.ProducerType;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
@@ -30,6 +25,11 @@ import org.apache.camel.test.junit4.CamelTestSupport;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.runners.Parameterized.Parameters;
 
@@ -61,7 +61,7 @@ public class DisruptorWaitClaimStrategyComponentTest extends CamelTestSupport {
         final List<String[]> strategies = new ArrayList<String[]>();
 
         for (final DisruptorWaitStrategy waitStrategy : DisruptorWaitStrategy.values()) {
-            for (final ProducerType producerType : ProducerType.values()) {
+            for (final DisruptorProducerType producerType : DisruptorProducerType.values()) {
                 strategies.add(new String[] {waitStrategy.name(), producerType.name()});
             }
         }
