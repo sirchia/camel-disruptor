@@ -27,8 +27,8 @@ public class DisruptorConfigureTest extends CamelTestSupport {
     @Test
     public void testSizeConfigured() throws Exception {
         final DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo?size=2000", DisruptorEndpoint.class);
-        assertEquals("size", 2048, endpoint.getSize());
-        assertEquals("remainingCapacity", 2048, endpoint.remainingCapacity());
+        assertEquals("size", 2048, endpoint.getBufferSize());
+        assertEquals("getRemainingCapacity", 2048, endpoint.getRemainingCapacity());
     }
 
     @Test
@@ -47,8 +47,8 @@ public class DisruptorConfigureTest extends CamelTestSupport {
         disruptor.setBufferSize(2000);
         assertEquals(2000, disruptor.getBufferSize());
         final DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
-        assertEquals("size", 2048, endpoint.getSize());
-        assertEquals("remainingCapacity", 2048, endpoint.remainingCapacity());
+        assertEquals("size", 2048, endpoint.getBufferSize());
+        assertEquals("getRemainingCapacity", 2048, endpoint.getRemainingCapacity());
     }
 
     @Test
@@ -57,8 +57,8 @@ public class DisruptorConfigureTest extends CamelTestSupport {
         disruptor.setQueueSize(2000);
         assertEquals(2000, disruptor.getQueueSize());
         final DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
-        assertEquals("size", 2048, endpoint.getSize());
-        assertEquals("remainingCapacity", 2048, endpoint.remainingCapacity());
+        assertEquals("size", 2048, endpoint.getBufferSize());
+        assertEquals("getRemainingCapacity", 2048, endpoint.getRemainingCapacity());
     }
 
     @Test
@@ -132,7 +132,7 @@ public class DisruptorConfigureTest extends CamelTestSupport {
     public void testDefaults() {
         final DisruptorEndpoint endpoint = resolveMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
         assertEquals("concurrentConsumers: wrong default", 1, endpoint.getConcurrentConsumers());
-        assertEquals("bufferSize: wrong default", DisruptorComponent.DEFAULT_BUFFER_SIZE, endpoint.getSize());
+        assertEquals("bufferSize: wrong default", DisruptorComponent.DEFAULT_BUFFER_SIZE, endpoint.getBufferSize());
         assertEquals("timeout: wrong default", 30000L, endpoint.getTimeout());
         assertEquals("waitForTaskToComplete: wrong default", WaitForTaskToComplete.IfReplyExpected, endpoint.getWaitForTaskToComplete());
         assertEquals("DisruptorWaitStrategy: wrong default", DisruptorWaitStrategy.Blocking, endpoint.getDisruptor().getWaitStrategy());

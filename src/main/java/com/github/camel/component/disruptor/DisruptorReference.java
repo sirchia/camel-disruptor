@@ -280,7 +280,7 @@ class DisruptorReference {
         resizeThreadPoolExecutor(0);
     }
 
-    public long remainingCapacity() throws DisruptorNotStartedException {
+    public long getRemainingCapacity() throws DisruptorNotStartedException {
         return getCurrentDisruptor().getRingBuffer().remainingCapacity();
     }
 
@@ -296,10 +296,10 @@ class DisruptorReference {
         return size;
     }
 
-    public int getPendingExchangeSize() {
+    public int getPendingExchangeCount() {
         try {
             if (!hasNullReference()) {
-                return (int) (getBufferSize() - remainingCapacity() + temporaryExchangeBuffer.size());
+                return (int) (getBufferSize() - getRemainingCapacity() + temporaryExchangeBuffer.size());
             }
         } catch (DisruptorNotStartedException e) {
             //fall through...

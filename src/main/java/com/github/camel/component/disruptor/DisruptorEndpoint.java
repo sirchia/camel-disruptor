@@ -19,7 +19,6 @@ package com.github.camel.component.disruptor;
 import com.lmax.disruptor.InsufficientCapacityException;
 import org.apache.camel.*;
 import org.apache.camel.api.management.ManagedAttribute;
-import org.apache.camel.api.management.ManagedOperation;
 import org.apache.camel.impl.DefaultEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,13 +59,18 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
     }
 
     @ManagedAttribute(description = "Buffer max capacity")
-    public int getSize() {
+    public int getBufferSize() {
         return disruptorReference.getBufferSize();
     }
 
-    @ManagedOperation(description = "Remaining capacity in ring buffer")
-    public long remainingCapacity() throws DisruptorNotStartedException {
-        return getDisruptor().remainingCapacity();
+    @ManagedAttribute(description = "Remaining capacity in ring buffer")
+    public long getRemainingCapacity() throws DisruptorNotStartedException {
+        return getDisruptor().getRemainingCapacity();
+    }
+
+    @ManagedAttribute(description = "Amount of pending exchanges waiting for consumption in ring buffer")
+    public long getPendingExchangeCount() throws DisruptorNotStartedException {
+        return getDisruptor().getPendingExchangeCount();
     }
 
 
