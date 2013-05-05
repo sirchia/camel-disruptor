@@ -16,8 +16,6 @@
 
 package org.apache.camel.component.disruptor;
 
-import java.util.HashSet;
-import java.util.Set;
 import org.apache.camel.*;
 import org.apache.camel.impl.LoggingExceptionHandler;
 import org.apache.camel.spi.ExceptionHandler;
@@ -28,6 +26,9 @@ import org.apache.camel.util.AsyncProcessorHelper;
 import org.apache.camel.util.ExchangeHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A Consumer for the Disruptor component.
@@ -107,7 +108,7 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
 
     @Override
     public int getPendingExchangesSize() {
-        return getEndpoint().getDisruptor().getPendingExchangeSize();
+        return getEndpoint().getDisruptor().getPendingExchangeCount();
     }
 
     @Override

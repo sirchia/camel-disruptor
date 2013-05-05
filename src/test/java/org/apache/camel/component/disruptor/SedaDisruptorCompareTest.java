@@ -269,11 +269,11 @@ public class SedaDisruptorCompareTest extends CamelTestSupport {
 
                     long remainingCapacity = 0;
                     try {
-                        remainingCapacity = disruptorEndpoint.remainingCapacity();
+                        remainingCapacity = disruptorEndpoint.getRemainingCapacity();
                     } catch (DisruptorNotStartedException e) {
                         //ignore
                     }
-                    endpointSizeQueue.offer((int) (disruptorEndpoint.getSize() - remainingCapacity));
+                    endpointSizeQueue.offer((int) (disruptorEndpoint.getBufferSize() - remainingCapacity));
                 }
             }
         };

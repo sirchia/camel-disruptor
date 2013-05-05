@@ -37,7 +37,7 @@ You can append query options to the URI in the following format:
 Options
 ---
 <table>
-<tr><td>Name</td><td>Default</td><td>Description</td></tr>
+<tr><td><strong>Name</strong></td><td><strong>Default</strong></td><td><strong>Description</strong></td></tr>
 <tr>
 <td>size</td>
 <td>1024</td>
@@ -50,14 +50,14 @@ being created. </td>
 <tr>
 <td>bufferSize</td>
 <td></td>
-<td>**Component only:** The maximum default size (capacity of the number of messages it can hold) of the Disruptors
+<td><strong>Component only:** The maximum default size (capacity of the number of messages it can hold) of the Disruptors
 ringbuffer. This option is used if size is not in use.</td>
 </tr>
 
 <tr>
 <td>queueSize</td>
 <td></td>
-<td>**Component only:** Additional option to specify the *bufferSize* to maintain maximum compatibility with the SEDA
+<td><strong>Component only:** Additional option to specify the *bufferSize* to maintain maximum compatibility with the SEDA
 Component.</td>
 </tr>
 
@@ -97,7 +97,7 @@ every consumer endpoint.</td>
 <tr>
 <td>defaultMultipleConsumers</td>
 <td></td>
-<td>**Component only:** Allows to set the default allowance of multiple consumers for endpoints created by this comonent
+<td><strong>Component only:** Allows to set the default allowance of multiple consumers for endpoints created by this comonent
 used when *multipleConsumers* is not provided.</td>
 </tr>
 
@@ -119,7 +119,7 @@ option, an exception will be thrown stating that the queue is full.</td>
 <tr>
 <td>defaultBlockWhenFull</td>
 <td></td>
-<td>**Component only:** Allows to set the default producer behaviour when the ringbuffer is full for endpoints created
+<td><strong>Component only:** Allows to set the default producer behaviour when the ringbuffer is full for endpoints created
 by this comonent used when *blockWhenFull* is not provided.</td>
 </tr>
 
@@ -133,7 +133,7 @@ by this comonent used when *blockWhenFull* is not provided.</td>
 <tr>
 <td>defaultWaitStrategy</td>
 <td></td>
-<td>**Component only:** Allows to set the default wait strategy for endpoints created by this comonent used when
+<td><strong>Component only:** Allows to set the default wait strategy for endpoints created by this comonent used when
 *waitStrategy* is not provided.</td>
 </tr>
 
@@ -148,7 +148,7 @@ synchronized) is active.</td>
 <tr>
 <td>defaultProducerType</td>
 <td></td>
-<td>**Component only:** Allows to set the default producer type for endpoints created by this comonent used when
+<td><strong>Component only:** Allows to set the default producer type for endpoints created by this comonent used when
 *producerType* is not provided.</td>
 </tr>
 
@@ -156,25 +156,126 @@ synchronized) is active.</td>
 
 Wait strategies
 ---
-TODO
+The wait strategy effects the type of waiting performed by the consumer threads that are currently waiting for the next
+exchange to be published. The following strategies can be chosen:
+<table>
+<tr><td><strong>Name</strong></td><td><strong>Description</strong></td><td><strong>Advice</strong></td></tr>
+<tr>
+<td>Blocking</td>
+<td>Blocking strategy that uses a lock and condition variable for Consumers waiting on a barrier.</td>
+<td>This strategy can be used when throughput and low-latency are not as important as CPU resource. </td>
+</tr>
+
+<tr>
+<td>Sleeping</td>
+<td>Sleeping strategy that initially spins, then uses a Thread.yield(), and eventually for the minimum number of nanos
+the OS and JVM will allow while the Consumers are waiting on a barrier.</td>
+<td>This strategy is a good compromise between performance and CPU resource. Latency spikes can occur after quiet 
+periods.</td>
+</tr>
+
+<tr>
+<td>BusySpin</td>
+<td>Busy Spin strategy that uses a busy spin loop for Consumers waiting on a barrier.</td>
+<td>This strategy will use CPU resource to avoid syscalls which can introduce latency jitter.  It is best used when
+threads can be bound to specific CPU cores.</td>
+</tr>
+
+<tr>
+<td>Yielding</td>
+<td>Yielding strategy that uses a Thread.yield() for Consumers waiting on a barrier after an initially spinning.</td>
+<td>This strategy is a good compromise between performance and CPU resource without incurring significant latency
+spikes.</td>
+</tr>
+</table>
 
 Use of Request Reply
 ---
-TODO
+The Disruptor component supports using [Request Reply](http://camel.apache.org/request-reply.html), where the caller
+will wait for the [Async](http://camel.apache.org/async.html) route to complete. For instance:
+    
+    from("mina:tcp://0.0.0.0:9876?textline=true&sync=true").to("disruptor:input");
+    from("disruptor:input").to("bean:processInput").to("bean:createResponse");
+In the route above, we have a TCP listener on port 9876 that accepts incoming requests. The request is routed to the 
+*disruptor:input* buffer. As it is a [Request Reply](http://camel.apache.org/request-reply.html) message, we wait for
+the response. When the consumer on the *disruptor:input* buffer is complete, it copies the response to the original
+message response.
 
 Concurrent consumers
 ---
-TODO
+By default, the Disruptor endpoint uses a single consumer thread, but you can configure it to use concurrent consumer
+threads. So instead of thread pools you can use:
+
+    from("disruptor:stageName?concurrentConsumers=5").process(...)
+As for the difference between the two, note a thread pool can increase/shrink dynamically at runtime depending on load,
+whereas the number of concurrent consumers is always fixed and supported by the Disruptor internally so performance will
+be higher.
 
 Thread pools
 ---
-TODO
+Be aware that adding a thread pool to a Disruptor endpoint by doing something like:
+
+    from("disruptor:stageName").thread(5).process(...)
+Can wind up with adding a normal
+[BlockingQueue](http://docs.oracle.com/javase/1.5.0/docs/api/java/util/concurrent/BlockingQueue.html) to be used in
+conjunction with the Disruptor, effectively nagating part of the performance gains achieved by using the Disruptor.
+Instead, it is advices to directly configure number of threads that process messages on a Disruptor endpoint using the
+*concurrentConsumers* option.
 
 Sample
 ---
-TODO
+In the route below we use the Disruptor to send the request to this async queue to be able to send a fire-and-forget
+message for further processing in another thread, and return a constant reply in this thread to the original caller.
+
+    public void configure() throws Exception {
+        from("direct:start")
+            // send it to the disruptor that is async
+            .to("disruptor:next")
+            // return a constant response
+            .transform(constant("OK"));
+
+        from("disruptor:next").to("mock:result");
+    }
+Here we send a Hello World message and expects the reply to be OK.
+
+    Object out = template.requestBody("direct:start", "Hello World");
+    assertEquals("OK", out);
+The "Hello World" message will be consumed from the Disruptor from another thread for further processing. Since this is
+from a unit test, it will be sent to a mock endpoint where we can do assertions in the unit test.
 
 Using multipleConsumers
 ---
-TODO
+In this example we have defined two consumers and registered them as spring beans.
 
+    <!-- define the consumers as spring beans -->
+    <bean id="consumer1" class="org.apache.camel.spring.example.FooEventConsumer"/>
+    
+    <bean id="consumer2" class="org.apache.camel.spring.example.AnotherFooEventConsumer"/>
+    
+    <camelContext xmlns="http://camel.apache.org/schema/spring">
+        <!-- define a shared endpoint which the consumers can refer to instead of using url -->
+        <endpoint id="foo" uri="disruptor:foo?multipleConsumers=true"/>
+    </camelContext>
+    
+Since we have specified *multipleConsumers=true* on the Disruptor foo endpoint we can have those two or more consumers
+receive their own copy of the message as a kind of pub-sub style messaging. As the beans are part of an unit test they
+simply send the message to a mock endpoint, but notice how we can use @Consume to consume from the Disruptor.
+
+    public class FooEventConsumer {
+
+        @EndpointInject(uri = "mock:result")
+        private ProducerTemplate destination;
+
+        @Consume(ref = "foo")
+        public void doSomething(String body) {
+            destination.sendBody("foo" + body);
+        }
+
+    }
+
+Extracting disruptor information
+---
+If needed, information such as buffer size, etc. can be obtained without using JMX in this fashion:
+
+    DisruptorEndpoint disruptor = context.getEndpoint("disruptor:xxxx");
+    int size = disruptor.getBufferSize();

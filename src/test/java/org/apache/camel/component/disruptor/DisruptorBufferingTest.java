@@ -35,7 +35,7 @@ public class DisruptorBufferingTest extends CamelTestSupport {
 
         final DisruptorEndpoint disruptorEndpoint = getMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
 
-        assertEquals(5, disruptorEndpoint.getDisruptor().remainingCapacity());
+        assertEquals(5, disruptorEndpoint.getDisruptor().getRemainingCapacity());
 
         // Add a first consumer on the endpoint
         context.addRoutes(new RouteBuilder() {
@@ -60,7 +60,7 @@ public class DisruptorBufferingTest extends CamelTestSupport {
 
         final DisruptorEndpoint disruptorEndpoint = getMandatoryEndpoint("disruptor:foo", DisruptorEndpoint.class);
 
-        assertEquals(5, disruptorEndpoint.getDisruptor().remainingCapacity());
+        assertEquals(5, disruptorEndpoint.getDisruptor().getRemainingCapacity());
 
         // Add a first consumer on the endpoint
         context.addRoutes(new RouteBuilder() {

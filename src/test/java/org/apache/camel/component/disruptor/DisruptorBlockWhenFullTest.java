@@ -48,7 +48,7 @@ public class DisruptorBlockWhenFullTest extends CamelTestSupport {
         getMockEndpoint(MOCK_URI).setExpectedMessageCount(QUEUE_SIZE + 20);
 
         final DisruptorEndpoint disruptor = context.getEndpoint(DEFAULT_URI, DisruptorEndpoint.class);
-        assertEquals(QUEUE_SIZE, disruptor.remainingCapacity());
+        assertEquals(QUEUE_SIZE, disruptor.getRemainingCapacity());
 
         sendSoManyOverCapacity(DEFAULT_URI, QUEUE_SIZE, 20);
         assertMockEndpointsSatisfied();
@@ -59,7 +59,7 @@ public class DisruptorBlockWhenFullTest extends CamelTestSupport {
         getMockEndpoint(MOCK_URI).setExpectedMessageCount(QUEUE_SIZE + 20);
 
         final DisruptorEndpoint disruptor = context.getEndpoint(DEFAULT_URI, DisruptorEndpoint.class);
-        assertEquals(QUEUE_SIZE, disruptor.remainingCapacity());
+        assertEquals(QUEUE_SIZE, disruptor.getRemainingCapacity());
 
         sendSoManyOverCapacity(EXCEPTION_WHEN_FULL_URI, QUEUE_SIZE, 20);
         assertMockEndpointsSatisfied();
