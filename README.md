@@ -1,12 +1,12 @@
 Disruptor Component
 ---
-The **disruptor:** component provides asynchronous [SEDA](http://www.eecs.harvard.edu/~mdw/proj/seda/) behavior much as the standard SEDA Component, but utilizes a
-[Disruptor](https://github.com/LMAX-Exchange/disruptor) instead of a
-[BlockingQueue](http://docs.oracle.com/javase/1.5.0/docs/api/java/util/concurrent/BlockingQueue.html) utilized by the
-standard [SEDA Component](http://camel.apache.org/seda.html).
+The **disruptor:** component provides asynchronous <a href="http://www.eecs.harvard.edu/~mdw/proj/seda/">SEDA</a> behavior much as the standard SEDA Component, but utilizes a
+<a href="https://github.com/LMAX-Exchange/disruptor">Disruptor</a> instead of a
+<a href="http://docs.oracle.com/javase/1.5.0/docs/api/java/util/concurrent/BlockingQueue.html">BlockingQueue</a> utilized by the
+standard <a href="http://camel.apache.org/seda.html">SEDA Component</a>.
 
 As with the SEDA component, queues are only visible within a *single*
-[CamelContext](http://camel.apache.org/camelcontext.html) and no support is provided for persistence or recovery.
+<a href="http://camel.apache.org/camelcontext.html">CamelContext</a> and no support is provided for persistence or recovery.
 
 The main advantage of choosing to use the Disruptor Component over the SEDA Component is performance in use cases where
 there is high contention between producer(s) and/or multicasted or concurrent Consumers. In those cases, significant
@@ -29,7 +29,7 @@ URI format
 ---
     disruptor:someName[?options]
 Where **someName** can be any string that uniquely identifies the endpoint within the current
-[CamelContext](http://camel.apache.org/camelcontext.html).
+<a href="http://camel.apache.org/camelcontext.html">CamelContext</a>.
 You can append query options to the URI in the following format:
 
     ?option=value&option=value&…
@@ -42,7 +42,7 @@ Options
 <td>size</td>
 <td>1024</td>
 <td>The maximum capacity of the Disruptors ringbuffer. Will be effectively increased to the nearest power of two.
-**Notice:** Mind if you use this option, then its the first endpoint being created with the queue name, that determines
+<strong>Notice:</strong> Mind if you use this option, then its the first endpoint being created with the queue name, that determines
 the size. To make sure all endpoints use same size, then configure the size option on all of them, or the first endpoint
 being created. </td>
 </tr>
@@ -50,14 +50,14 @@ being created. </td>
 <tr>
 <td>bufferSize</td>
 <td></td>
-<td><strong>Component only:** The maximum default size (capacity of the number of messages it can hold) of the Disruptors
+<td><strong>Component only:</strong> The maximum default size (capacity of the number of messages it can hold) of the Disruptors
 ringbuffer. This option is used if size is not in use.</td>
 </tr>
 
 <tr>
 <td>queueSize</td>
 <td></td>
-<td><strong>Component only:** Additional option to specify the *bufferSize* to maintain maximum compatibility with the SEDA
+<td><strong>Component only:</strong> Additional option to specify the <em>bufferSize</em> to maintain maximum compatibility with the SEDA
 Component.</td>
 </tr>
 
@@ -71,17 +71,17 @@ Component.</td>
 <td>waitForTaskToComplete</td>
 <td>IfReplyExpected</td>
 <td>Option to specify whether the caller should wait for the async task to complete or not before continuing.
-The following three options are supported: *Always*, *Never* or *IfReplyExpected*. The first two values are self-explanatory.
-The last value, *IfReplyExpected*, will only wait if the message is
-[Request Reply](http://camel.apache.org/request-reply.html) based. See more information about
-[Async](http://camel.apache.org/async.html) messaging.</td>
+The following three options are supported: <em>Always</em>, <em>Never</em> or <em>IfReplyExpected</em>. The first two values are self-explanatory.
+The last value, <em>IfReplyExpected</em>, will only wait if the message is
+<a href="http://camel.apache.org/request-reply.html">Request Reply</a> based. See more information about
+<a href="http://camel.apache.org/async.html">Async</a> messaging.</td>
 </tr>
 
 <tr>
 <td>timeout</td>
 <td>30000</td>
 <td>Timeout (in milliseconds) before a producer will stop waiting for an asynchronous task to complete. See
-*waitForTaskToComplete* and [Async](http://camel.apache.org/async.html) for more details. You can disable timeout by
+<em>waitForTaskToComplete</em> and <a href="http://camel.apache.org/async.html">Async</a> for more details. You can disable timeout by
 using 0 or a negative value.</td>
 </tr>
 
@@ -89,7 +89,7 @@ using 0 or a negative value.</td>
 <td>multipleConsumers</td>
 <td>false</td>
 <td>Specifies whether multiple consumers are allowed. If enabled, you can use Disruptor for
-[Publish-Subscribe](http://en.wikipedia.org/wiki/Publish–subscribe_pattern) messaging. That is, you can send a message
+<a href="http://en.wikipedia.org/wiki/Publish–subscribe_pattern">Publish-Subscribe</a> messaging. That is, you can send a message
 to the Disruptor and have each consumer receive a copy of the message. When enabled, this option should be specified on
 every consumer endpoint.</td>
 </tr>
@@ -97,8 +97,8 @@ every consumer endpoint.</td>
 <tr>
 <td>defaultMultipleConsumers</td>
 <td></td>
-<td><strong>Component only:** Allows to set the default allowance of multiple consumers for endpoints created by this comonent
-used when *multipleConsumers* is not provided.</td>
+<td><strong>Component only:</strong> Allows to set the default allowance of multiple consumers for endpoints created by this comonent
+used when <em>multipleConsumers</em> is not provided.</td>
 </tr>
 
 <tr>
@@ -119,37 +119,37 @@ option, an exception will be thrown stating that the queue is full.</td>
 <tr>
 <td>defaultBlockWhenFull</td>
 <td></td>
-<td><strong>Component only:** Allows to set the default producer behaviour when the ringbuffer is full for endpoints created
-by this comonent used when *blockWhenFull* is not provided.</td>
+<td><strong>Component only:</strong> Allows to set the default producer behaviour when the ringbuffer is full for endpoints created
+by this comonent used when <em>blockWhenFull</em> is not provided.</td>
 </tr>
 
 <tr>
 <td>waitStrategy</td>
 <td>Blocking</td>
 <td>Defines the strategy used by consumer threads to wait on new exchanges to be published. The options allowed are:
-*Blocking*, *Sleeping*, *BusySpin* and *Yielding*. Refer to the section below for more information on this subject</td>
+<em>Blocking</em>, <em>Sleeping</em>, <em>BusySpin</em> and <em>Yielding</em>. Refer to the section below for more information on this subject</td>
 </tr>
 
 <tr>
 <td>defaultWaitStrategy</td>
 <td></td>
-<td><strong>Component only:** Allows to set the default wait strategy for endpoints created by this comonent used when
-*waitStrategy* is not provided.</td>
+<td><strong>Component only:</strong> Allows to set the default wait strategy for endpoints created by this comonent used when
+<em>waitStrategy</em> is not provided.</td>
 </tr>
 
 <tr>
 <td>producerType</td>
 <td>Multi</td>
-<td>Defines the producers allowed on the Disruptor. The options allowed are: *Multi* to allow multiple producers and
-*Single* to enable certain optimizations only allowed when one concurrent producer (on one thread or otherwise
+<td>Defines the producers allowed on the Disruptor. The options allowed are: <em>Multi</em> to allow multiple producers and
+<em>Single</em> to enable certain optimizations only allowed when one concurrent producer (on one thread or otherwise
 synchronized) is active.</td>
 </tr>
 
 <tr>
 <td>defaultProducerType</td>
 <td></td>
-<td><strong>Component only:** Allows to set the default producer type for endpoints created by this comonent used when
-*producerType* is not provided.</td>
+<td><strong>Component only:</strong> Allows to set the default producer type for endpoints created by this comonent used when
+<em>producerType</em> is not provided.</td>
 </tr>
 
 </table>
@@ -191,13 +191,13 @@ spikes.</td>
 
 Use of Request Reply
 ---
-The Disruptor component supports using [Request Reply](http://camel.apache.org/request-reply.html), where the caller
-will wait for the [Async](http://camel.apache.org/async.html) route to complete. For instance:
+The Disruptor component supports using <a href="http://camel.apache.org/request-reply.html">Request Reply</a>, where the caller
+will wait for the <a href="http://camel.apache.org/async.html">Async</a> route to complete. For instance:
     
     from("mina:tcp://0.0.0.0:9876?textline=true&sync=true").to("disruptor:input");
     from("disruptor:input").to("bean:processInput").to("bean:createResponse");
 In the route above, we have a TCP listener on port 9876 that accepts incoming requests. The request is routed to the 
-*disruptor:input* buffer. As it is a [Request Reply](http://camel.apache.org/request-reply.html) message, we wait for
+*disruptor:input* buffer. As it is a <a href="http://camel.apache.org/request-reply.html">Request Reply</a> message, we wait for
 the response. When the consumer on the *disruptor:input* buffer is complete, it copies the response to the original
 message response.
 
@@ -217,8 +217,8 @@ Be aware that adding a thread pool to a Disruptor endpoint by doing something li
 
     from("disruptor:stageName").thread(5).process(...)
 Can wind up with adding a normal
-[BlockingQueue](http://docs.oracle.com/javase/1.5.0/docs/api/java/util/concurrent/BlockingQueue.html) to be used in
-conjunction with the Disruptor, effectively nagating part of the performance gains achieved by using the Disruptor.
+<a href="http://docs.oracle.com/javase/1.5.0/docs/api/java/util/concurrent/BlockingQueue.html">BlockingQueue</a> to be used in
+conjunction with the Disruptor, effectively negating part of the performance gains achieved by using the Disruptor.
 Instead, it is advices to directly configure number of threads that process messages on a Disruptor endpoint using the
 *concurrentConsumers* option.
 
