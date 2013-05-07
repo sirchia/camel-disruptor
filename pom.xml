@@ -32,6 +32,7 @@
     <packaging>bundle</packaging>
 
     <properties>
+        <camel.osgi.export.pkg>com.github.camel.component.disruptor.*</camel.osgi.export.pkg>
         <disruptor.version>3.0.1</disruptor.version>
     </properties>
 
