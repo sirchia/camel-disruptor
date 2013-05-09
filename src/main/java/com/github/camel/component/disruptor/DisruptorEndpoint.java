@@ -150,6 +150,7 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     @Override
     protected void doStart() throws Exception {
+        LOGGER.debug("Start enpoint {}", this);
         // notify reference we are shutting down this endpoint
         disruptorReference.addEndpoint(this);
 
@@ -158,10 +159,22 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     @Override
     protected void doStop() throws Exception {
+        LOGGER.debug("Stop enpoint {}", this);
         // notify reference we are shutting down this endpoint
         disruptorReference.removeEndpoint(this);
 
         super.doStop();    //To change body of overridden methods use File | Settings | File Templates.
+    }
+
+
+    @Override
+    protected void doShutdown() throws Exception {
+        // notify component we are shutting down this endpoint
+        if (getComponent() != null) {
+            getComponent().onShutdownEndpoint(this);
+        }
+
+        super.doShutdown();
     }
 
     @Override
@@ -171,6 +184,11 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     void onStarted(final DisruptorConsumer consumer) throws Exception {
         synchronized (this) {
+            // validate multiple consumers has been enabled is necessary
+            if (!consumers.isEmpty() && !isMultipleConsumersSupported()) {
+                throw new IllegalStateException("Multiple consumers for the same endpoint is not allowed: " + this);
+            }
+
             if (consumers.add(consumer)) {
                 LOGGER.debug("Starting consumer {} on endpoint {}", consumer, getEndpointUri());
 
@@ -242,5 +260,12 @@ public class DisruptorEndpoint extends DefaultEndpoint implements MultipleConsum
 
     DisruptorReference getDisruptor() {
         return disruptorReference;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        boolean result = super.equals(object);
+
+        return result && getCamelContext().equals(((DisruptorEndpoint)object).getCamelContext());
     }
 }

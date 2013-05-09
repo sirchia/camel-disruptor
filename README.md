@@ -18,6 +18,8 @@ possible. The main differences with the SEDA Component are the following:
 * The buffer used is always bounded in size (default 1024 exchanges).
 * As a the buffer is always bouded, the default behaviour for the Disruptor is to block while the buffer is full
 instead of throwing an exception. This default behaviour may be configured on the component (see options).
+* The Disruptor enpoints don't implement the BrowsableEndpoint interface. As such, the exchanges currently in the
+Disruptor can't be retrieved, only the amount of exchanges.
 * The Disruptor requires its consumers (multicasted or otherwise) to be statically configured. Adding or removing
 consumers on the fly requires complete flushing of all pending exchanges in the Disruptor.
 * As a result of the reconfiguration: Data sent over a Disruptor is directly processed and 'gone' if there is at least

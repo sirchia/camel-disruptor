@@ -34,7 +34,7 @@ import java.util.concurrent.locks.LockSupport;
  * This is used to keep track of the usages of the Disruptors, so we know when a Disruptor is no longer in use, and
  * can safely be discarded.
  */
-class DisruptorReference {
+public class DisruptorReference {
     private static final Logger LOGGER = LoggerFactory.getLogger(DisruptorReference.class);
 
     private final Set<DisruptorEndpoint> endpoints = Collections.newSetFromMap(new WeakHashMap<DisruptorEndpoint, Boolean>(4));
@@ -125,12 +125,14 @@ class DisruptorReference {
     }
 
     public synchronized void reconfigure() throws Exception {
+        LOGGER.debug("Reconfiguring disruptor {}", this);
         shutdownDisruptor(true);
 
         start();
     }
 
     private void start() throws Exception {
+        LOGGER.debug("Starting disruptor {}", this);
         Disruptor<ExchangeEvent> newDisruptor = createDisruptor();
 
         newDisruptor.start();
@@ -182,6 +184,7 @@ class DisruptorReference {
             }
         }
 
+        LOGGER.debug("Disruptor created with {} event handlers", eventHandlers.size());
         handleEventsWith(newDisruptor, eventHandlers.toArray(new LifecycleAwareExchangeEventHandler[eventHandlers.size()]));
 
         return newDisruptor;
@@ -213,19 +216,23 @@ class DisruptorReference {
 
     private void resizeThreadPoolExecutor(final int newSize) {
         if (executor == null && newSize > 0) {
+            LOGGER.debug("Creating new executor with {} threads", newSize);
             //no thread pool executor yet, create a new one
             executor = component.getCamelContext().getExecutorServiceManager().newFixedThreadPool(this, uri,
                     newSize);
         } else if (executor != null && newSize <= 0) {
+            LOGGER.debug("Shutting down executor");
             //we need to shut down our executor
             component.getCamelContext().getExecutorServiceManager().shutdown(executor);
             executor = null;
         } else if (executor instanceof ThreadPoolExecutor) {
+            LOGGER.debug("Resizing existing executor to {} threads", newSize);
             //our thread pool executor is of type ThreadPoolExecutor, we know how to resize it
             final ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) executor;
             threadPoolExecutor.setCorePoolSize(newSize);
             threadPoolExecutor.setMaximumPoolSize(newSize);
         } else if (newSize > 0) {
+            LOGGER.debug("Shutting down old and creating new executor with {} threads", newSize);
             //hmmm...no idea what kind of executor this is...just kill it and start fresh
             component.getCamelContext().getExecutorServiceManager().shutdown(executor);
 
@@ -235,6 +242,7 @@ class DisruptorReference {
     }
 
     private synchronized void shutdownDisruptor(boolean isReconfiguring) {
+        LOGGER.debug("Shutting down disruptor {}, reconfiguring: {}", this, isReconfiguring);
         Disruptor<ExchangeEvent> currentDisruptor = disruptor.getReference();
         disruptor.set(null, isReconfiguring);
 
@@ -308,11 +316,15 @@ class DisruptorReference {
     }
 
     public synchronized void addEndpoint(final DisruptorEndpoint disruptorEndpoint) {
+        LOGGER.debug("Adding Endpoint: " + disruptorEndpoint);
         endpoints.add(disruptorEndpoint);
+        LOGGER.debug("Endpoint added: {}, new total endpoints {}", disruptorEndpoint, endpoints.size());
     }
 
     public synchronized void removeEndpoint(final DisruptorEndpoint disruptorEndpoint) {
+        LOGGER.debug("Removing Endpoint: " + disruptorEndpoint);
         if (getEndpointCount() == 1) {
+            LOGGER.debug("Last Endpoint removed, shutdown disruptor");
             //Shutdown our disruptor
             shutdownDisruptor(false);
 
@@ -320,10 +332,20 @@ class DisruptorReference {
             shutdownExecutor();
         }
         endpoints.remove(disruptorEndpoint);
+        LOGGER.debug("Endpoint removed: {}, new total endpoints {}", disruptorEndpoint, endpoints.size());
     }
 
     public synchronized int getEndpointCount() {
         return endpoints.size();
+    }
+
+    @Override
+    public String toString() {
+        return "DisruptorReference{" +
+                "uri='" + uri + '\'' +
+                ", endpoint count=" + endpoints.size() +
+                ", handler count=" + handlers.length +
+                '}';
     }
 
     /**

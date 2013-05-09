@@ -33,8 +33,9 @@
 
     <properties>
         <camel.osgi.export.pkg>com.github.camel.component.disruptor.*</camel.osgi.export.pkg>
+        <camel.osgi.export.service>org.apache.camel.spi.ComponentResolver;component=disruptor</camel.osgi.export.service>
+        <camel.osgi.export.service>org.apache.camel.spi.ComponentResolver;component=disruptor-vm</camel.osgi.export.service>
         <disruptor.version>3.0.1</disruptor.version>
-        <camel.osgi.export.pkg>com.github.camel.component.disruptor</camel.osgi.export.pkg>
     </properties>
 
     <dependencies>
@@ -51,6 +52,13 @@
         </dependency>
 
         <!-- Test dependencies -->
+
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-core</artifactId>
+            <type>test-jar</type>
+            <version>${project.parent.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.camel</groupId>

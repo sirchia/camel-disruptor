@@ -22,6 +22,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.seda.SedaEndpoint;
 import org.apache.camel.test.junit4.CamelTestSupport;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -38,6 +39,7 @@ import java.util.concurrent.*;
  * <p/>
  * As memory management may have great impact on the results, it is adviced to run this test with a large, fixed heap (e.g. run with -Xmx1024m -Xms1024m JVM parameters)
  */
+@Ignore
 @RunWith(value = Parameterized.class)
 public class SedaDisruptorCompareTest extends CamelTestSupport {
 

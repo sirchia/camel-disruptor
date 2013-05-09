@@ -31,7 +31,7 @@ public class DisruptorRingBufferTest extends CamelTestSupport {
 
         // Following 3 calls should all reference same Disruptor ring buffer.
         template.sendBody("disruptor:foo", "Hello World");
-        template.sendBody("disruptor:foo?size=20", "Bye World");
+        template.sendBody("disruptor:foo?size=1024", "Bye World");
         template.sendBody("disruptor:foo?concurrentConsumers=5", "Goodday World");
 
         template.sendBody("disruptor:bar", "Bar");

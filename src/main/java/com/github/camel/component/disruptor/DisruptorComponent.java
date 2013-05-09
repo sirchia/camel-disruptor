@@ -98,7 +98,7 @@ public class DisruptorComponent extends DefaultComponent {
             throws Exception {
         final String key = getDisruptorKey(uri);
 
-        final int sizeToUse;
+        int sizeToUse;
         if (size > 0) {
             sizeToUse = size;
         } else if (bufferSize > 0) {
@@ -108,11 +108,22 @@ public class DisruptorComponent extends DefaultComponent {
         } else {
             sizeToUse = DEFAULT_BUFFER_SIZE;
         }
+        sizeToUse = powerOfTwo(sizeToUse);
+
         synchronized (this) {
             DisruptorReference ref = getDisruptors().get(key);
             if (ref == null) {
-                ref = new DisruptorReference(this, uri, powerOfTwo(sizeToUse), producerType, waitStrategy);
+                LOGGER.debug("Creating new disruptor for key {}", key);
+                ref = new DisruptorReference(this, uri, sizeToUse, producerType, waitStrategy);
                 getDisruptors().put(key, ref);
+            } else {
+                //if size was explicitly requested, the size to use should match the retrieved DisruptorReference
+                if (size != 0 && ref.getBufferSize() != sizeToUse) {
+                    // there is already a queue, so make sure the size matches
+                    throw new IllegalArgumentException("Cannot use existing queue " + key + " as the existing queue size "
+                            + ref.getBufferSize() + " does not match given queue size " + sizeToUse);
+                }
+                LOGGER.debug("Reusing disruptor {} for key {}", ref, key);
             }
 
             return ref;
@@ -130,7 +141,7 @@ public class DisruptorComponent extends DefaultComponent {
         return size;
     }
 
-    static String getDisruptorKey(String uri) {
+    public static String getDisruptorKey(String uri) {
         if (uri.contains("?")) {
             // strip parameters
             uri = uri.substring(0, uri.indexOf('?'));
@@ -146,7 +157,7 @@ public class DisruptorComponent extends DefaultComponent {
         super.doStop();
     }
 
-    Map<String, DisruptorReference> getDisruptors() {
+    public Map<String, DisruptorReference> getDisruptors() {
         return disruptors;
     }
 
@@ -208,5 +219,15 @@ public class DisruptorComponent extends DefaultComponent {
 
     public int getBufferSize() {
         return bufferSize;
+    }
+
+    public void onShutdownEndpoint(DisruptorEndpoint disruptorEndpoint) {
+        String disruptorKey = getDisruptorKey(disruptorEndpoint.getEndpointUri());
+        DisruptorReference disruptorReference = getDisruptors().get(disruptorKey);
+
+        if (disruptorReference.getEndpointCount() == 0) {
+            //the last disruptor has been removed, we can delete the disruptor
+            getDisruptors().remove(disruptorKey);
+        }
     }
 }

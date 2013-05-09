@@ -15,10 +15,11 @@
  */
 package com.github.camel.component.disruptor;
 
-import java.util.Iterator;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.test.junit4.CamelTestSupport;
 import org.junit.Test;
+
+import java.util.Iterator;
 
 /**
  *
@@ -55,7 +56,7 @@ public class DisruptorComponentReferenceEndpointTest extends CamelTestSupport {
         context.removeRoute("foo2");
 
         // and there is no longer disruptors for the foo key
-        assertTrue(disruptor.getDisruptors().get(fooKey).hasNullReference());
+        assertTrue(disruptor.getDisruptors().get(fooKey) == null);
 
         // there should still be a bar
         assertEquals(1, numberOfReferences(disruptor));

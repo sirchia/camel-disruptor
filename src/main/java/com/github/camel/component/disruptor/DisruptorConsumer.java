@@ -125,28 +125,8 @@ public class DisruptorConsumer extends ServiceSupport implements Consumer, Suspe
     }
 
     private void process(Exchange exchange) {
-        final int size = endpoint.getConsumers().size();
-
-        // if there are multiple consumers then we should make a copy of the exchange
-        if (size > 1) {
-
-            // validate multiple consumers has been enabled
-            if (!endpoint.isMultipleConsumersSupported()) {
-                throw new IllegalStateException("Multiple consumers for the same endpoint is not allowed: " + endpoint);
-            }
-
-            // send a new copied exchange with new camel context
-            exchange = prepareExchange(exchange);
-        } else {
-            //we don't need to copy the exchange (as only one consumer will process it
-            //but we do set the FromEndpoint to remain compatible with the behaviour of the SEDA endpoint
-            exchange.setFromEndpoint(endpoint);
-
-            //also clear the FromRouteId to have the unit of work processor set it to our route id
-            //as would have happened when we created a new exchange
-            exchange.setFromRouteId(null);
-        }
-
+        // send a new copied exchange with new camel context
+        exchange = prepareExchange(exchange);
         // use the regular processor and use the asynchronous routing engine to support it
         AsyncProcessorHelper.process(processor, exchange, noopAsyncCallback);
     }
